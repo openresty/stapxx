@@ -1,0 +1,168 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long qw( GetOptions );
+
+GetOptions("D=s%",      \(my $D_opts),
+           "arg=s%",    \(my $args),
+           "dump-src",  \(my $dump_src),
+           "help",      \(my $help),
+           "x=i",       \(my $pid),
+           "e=s",       \(my $src))
+   or die usage();
+
+if ($^O ne 'linux') {
+    die "Only linux is supported but I am on $^O.\n";
+}
+
+my $ver = `stap --version 2>&1`;
+if (!defined $ver) {
+    die "Systemtap not installed or its \"stap\" utility is not visible to the PATH environment: $!\n";
+}
+
+if ($ver =~ /version\s+(\d+\.\d+)/i) {
+    my $v = $1;
+    my $min_ver = 2.3;
+    if ($v < $min_ver) {
+        die "ERROR: at least systemtap $min_ver is required but found $v\n";
+    }
+
+} else {
+    die "ERROR: unknown version of systemtap:\n$ver\n";
+}
+
+if ($help) {
+    print usage();
+    exit;
+}
+
+if (!$D_opts) {
+    $D_opts = {};
+}
+
+if (!$D_opts->{MAXACTION}) {
+    $D_opts->{MAXACTION} = 100000;
+}
+
+if (!$D_opts->{MAXMAPENTRIES}) {
+    $D_opts->{MAXMAPENTRIES} = 5000;
+}
+
+if (!$D_opts->{MAXBACKTRACE}) {
+    $D_opts->{MAXBACKTRACE} = 200;
+}
+
+if (!defined $src) {
+    my $infile = shift
+        or die "No input file specified.\n";
+    open my $in, $infile
+        or die "Cannot open $infile for reading: $!\n";
+    $src = do { local $/; <$in> };
+    close $in;
+}
+
+my %StdVars;
+
+my @stap_opts;
+
+while (my ($k, $v) = each %$D_opts) {
+    push @stap_opts, "-D$k=$v";
+}
+
+if (defined $pid) {
+    push @stap_opts, "-x $pid";
+    my $exec_file = "/proc/$pid/exe";
+    if (!-f $exec_file) {
+        die "Nginx process $pid is not running or ",
+            "you do not have enough permissions.\n";
+    }
+
+    my $exec_path = readlink $exec_file;
+    $StdVars{exec_path} = $exec_path;
+}
+
+while (my ($k, $v) = each %$args) {
+    #warn "getting $k => $v";
+    $StdVars{"arg_$k"} = $v;
+}
+
+my @bits;
+{
+    # process the input file
+    open my $in, '<', \$src or die $!;
+
+    while (<$in>) {
+        if ($. == 1 && /^\#!/) {
+            $_ = "#!/usr/bin/env stap\n";
+            next;
+        }
+
+        s{\$\^(\w+)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($1, $2, $3)}eg;
+
+    } continue {
+        push @bits, $_;
+    }
+
+    close $in;
+}
+
+my $stap_src = join '', @bits;
+
+if ($dump_src) {
+    print $stap_src;
+    exit;
+}
+
+my $cmd = "stap @stap_opts -";
+#warn $cmd;
+open my $in, "|$cmd"
+    or die "Cannot run stap: $!\n";
+print $in $stap_src;
+close $in;
+
+sub eval_std_var {
+    my ($var, $trait_name, $trait_val) = @_;
+    if (defined $StdVars{$var}) {
+        return $StdVars{$var};
+    }
+
+    if (defined $trait_name) {
+        if ($trait_name eq 'default') {
+            $StdVars{$trait_name} = $trait_val;
+            return $trait_val;
+
+        } else {
+            die "line $.: unknown trait name: $trait_name\n";
+        }
+    }
+
+    if ($var eq 'exec_path') {
+        die "line $.: \$^exec_path is used but no -x <pid> option is specified.\n";
+
+    } elsif ($var =~ /arg_(\w+)/) {
+        die "line $.: \$^$var is used but no --arg $1=VAL option is specified.\n";
+
+    } else {
+        die "line $.: Undefined built-in variable \$^$var.\n";
+    }
+}
+
+sub usage {
+    return <<'_EOC_';
+Usage:
+    stap++ [optoins] [infile]
+
+Options:
+    --arg NM=VAL    Specify extra user arguments (for $^arg_NM).
+    -e SCRIPT       Run given script.
+    -D NM=VAL       emit macro definition into generated C code.
+    --help          Print this help.
+    -x PID          sets target() to PID (also for $^exec_path and $^libxxx_path).
+
+Examples:
+    stap++ -x 12345 -e 'probe begin { println("hello") exit() }'
+    stap++ -x 12345 infile.ss
+_EOC_
+}

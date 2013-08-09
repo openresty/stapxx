@@ -1,0 +1,45 @@
+#!/usr/bin/env stap++
+
+global connecting
+global stats
+global hits
+
+probe process("$^exec_path").function("ngx_http_upstream_connect")
+{
+    connecting[$r] = gettimeofday_us()
+}
+
+probe process("$^exec_path").function("ngx_http_upstream_finalize_request"),
+      process("$^exec_path").function("ngx_http_upstream_send_request"),
+      process("$^exec_path").function("ngx_http_upstream_next"),
+      process("$^exec_path").function("ngx_http_upstream_process_header")
+{
+    begin = connecting[$r]
+    if (begin) {
+        hits++
+        stats[probefunc()] <<< gettimeofday_us() - begin
+        delete connecting[$r]
+    }
+}
+
+probe end
+{
+    printf("\n")
+
+    if (hits == 0) {
+        println("No hits found so far.")
+
+    } else {
+
+        printf("Logarithmic histogram for latency (us) between ngx_http_upstream_connect and the following upstream functions:\n")
+        foreach (func in stats- limit $^arg_limit :default(1000)) {
+            printf("* %s\n", func)
+            print(@hist_log(stats[func]))
+        }
+    }
+}
+
+probe begin
+{
+    warn(sprintf("Tracing user process %d ($^exec_path)...\nHit Ctrl-C to end.\n", target()))
+}

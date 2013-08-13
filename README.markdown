@@ -6,12 +6,106 @@ stap++ - Simple language extentions to systemtap
 Synopsis
 ========
 
-    $ stap++ -x 12345 --arg limit=10 samples/ngx-upstream-post-conn.sxx
+    $ stap++ -I ./tapset -x 12345 --arg limit=10 samples/ngx-upstream-post-conn.sxx
 
 Description
 ===========
 
 This interpreter adds some simple language extensions to systemtap.
+
+Features
+========
+
+Standard Builtin Variables
+--------------------------
+
+### $^exec_path
+
+The variable `$^exec_path` is always evaluted to the path to the executable file
+for the pid specified by the `-x` option.
+
+Here is an example:
+
+    probe process("$^exec_path").function("blah") { ... }
+
+### $^arg_NAME
+
+This variable can evaluate to the value of a specified command-line argument. For example, `$^arg_limit` is evaluated to the value of the command line argument `limit` specified like this:
+
+    stap++ --arg limit=1000
+
+### Default values
+
+It's possible to specify a default value for a built-in variale by means of the `default` trait, as in
+
+    foreach (key in stats- limit $^arg_limit :default(1000)) {
+        ...
+    }
+
+where `$^arg_limit` takes the default value 1000 when the user does not specify the `--arg limit=N` command-line option while invoking `stap++`.
+
+User-defined Builtin Variables
+------------------------------
+
+It's possible to bind a `@cast()` expression to a user-defined bultin variable of the form `$*NAME`. Here is an example,
+
+    sock = sockfd_lookup(fd)
+    $*sock := @cast(sock, "socket", "kernel")
+
+    printf(", sock->state:%d", $*sock->state)
+    state = $*sock->sk->__sk_common->skc_state
+    printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
+
+Note that we used the `:=` operator to bind a `@cast()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` expression.
+
+The scope of user variables is always limited to the current `.sxx` source file.
+
+Tapset Modules
+--------------
+
+One can use the stap++ language to define new tapset module files and later use the `@use` directive to load the module in a main stap++ program file.
+
+For example, we can have a module file located at `./tapset/kernel/socket.sxx`:
+
+    // module kernel.socket
+    function socketfd_lookup(fd)
+    {
+        ...
+    }
+
+And then in a stap++ script file, `foo.sxx`, we can import this library like this
+
+    @use kernel.socket
+
+and in `foo.sxx`, we are now free to call the `socketfd_lookup` function defined in the `kernel.socket` module.
+
+Finally, we should invoke the `stap++` interpreter like this:
+
+    stap++ -I ./tapset foo.sxx ...
+
+Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules.
+
+Author
+======
+
+Yichun Zhang (agentzh), <agentzh@gmail.com>, CloudFlare Inc.
+
+Copyright and License
+=====================
+
+This module is licensed under the BSD license.
+
+Copyright (C) 2013, by Yichun "agentzh" Zhang (章亦春) <agentzh@gmail.com>, CloudFlare Inc.
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 See Also
 ========

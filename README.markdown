@@ -1,7 +1,7 @@
 NAME
 ====
 
-stap++ - Simple language extentions to systemtap
+stap++ - Simple macro language extentions to systemtap
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ Synopsis
 Description
 ===========
 
-This interpreter adds some simple language extensions to systemtap.
+This interpreter adds some simple macro language extensions to the systemtap scripting language.
 
 Efforts has been made to ensure that this macro language expansion does
 not affect the source line numbers so that the line numbers reported by `stap` are exactly the same in the original `.sxx` source files.

@@ -14,6 +14,9 @@ Description
 
 This interpreter adds some simple language extensions to systemtap.
 
+Efforts has been made to ensure that this macro language expansion does
+not affect the source line numbers so that the line numbers reported by `stap` are exactly the same in the original `.sxx` source files.
+
 Features
 ========
 

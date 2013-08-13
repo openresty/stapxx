@@ -4,8 +4,10 @@
 # Analyze the state in the position generating the
 # "upstream prematurely closed connection while reading response header"
 
+
 @use kernel.socket
 @use nginx.upstream
+
 
 probe process("$^exec_path").statement("*@ngx_http_upstream.c:1762")
 //probe process("$^exec_path").statement("ngx_http_upstream_send_request")

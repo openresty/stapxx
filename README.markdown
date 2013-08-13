@@ -89,6 +89,8 @@ Finally, we should invoke the `stap++` interpreter like this:
 
 Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules.
 
+Unlike `stap`, only the used stapset modules are processed so as to reduce startup time.
+
 Author
 ======
 

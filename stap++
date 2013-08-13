@@ -63,7 +63,7 @@ if (!defined $src) {
     close $in;
 }
 
-my %StdVars;
+my (%StdVars, %UsrVars);
 
 my @stap_opts;
 
@@ -100,6 +100,8 @@ my @bits;
         }
 
         s{\$\^(\w+)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($1, $2, $3)}eg;
+        s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$UsrVars{$1} = $2; ""}eg;
+        s{\$\*(\w+)}{eval_usr_var($1)}eg;
 
     } continue {
         push @bits, $_;
@@ -121,6 +123,15 @@ open my $in, "|$cmd"
     or die "Cannot run stap: $!\n";
 print $in $stap_src;
 close $in;
+
+sub eval_usr_var {
+    my ($var) = @_;
+    if (defined $UsrVars{$var}) {
+        return $UsrVars{$var};
+    }
+
+    die "line $.: Undefined user varaible \$*$var.\n";
+}
 
 sub eval_std_var {
     my ($var, $trait_name, $trait_val) = @_;

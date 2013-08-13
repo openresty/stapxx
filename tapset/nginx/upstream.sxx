@@ -1,0 +1,8 @@
+// module nginx.upstream
+
+function ngx_u_resp_time(u)
+{
+    $*u := @cast(u, "ngx_http_upstream_t", "$^exec_path")
+    begin = $*u->state->response_sec * 1000 + $*u->state->response_msec
+    return gettimeofday_ms() - begin
+}

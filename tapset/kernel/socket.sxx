@@ -1,0 +1,23 @@
+// module kernel.socket
+
+function sockfd_lookup(fd)
+{
+    current = task_current()
+    $*current := @cast(current, "task_struct", "kernel<linux/sched.h>")
+
+    files = $*current->files
+    $*files := @cast(files, "files_struct", "kernel<linux/fdtable.h>")
+
+    if (files == 0 || $*files->fdt == 0 || fd >= $*files->fdt->max_fds) {
+        return 0
+    }
+
+    file = $*files->fdt->fd[fd]
+    $*file := @cast(file, "struct file", "kernel")
+
+    if ($*file->f_op != &@var("socket_file_ops@net/socket.c", "kernel")) {
+        return 0
+    }
+
+    return $*file->private_data
+}

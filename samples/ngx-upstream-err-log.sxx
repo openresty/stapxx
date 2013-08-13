@@ -1,0 +1,33 @@
+#!/usr/bin/env stap++
+
+# OPS-935
+# Analyze the state in the position generating the
+# "upstream prematurely closed connection while reading response header"
+
+@use kernel.socket
+@use nginx.upstream
+
+probe process("$^exec_path").statement("*@ngx_http_upstream.c:1762")
+//probe process("$^exec_path").statement("ngx_http_upstream_send_request")
+{
+    u = $r->upstream
+    $*u := @cast(u, "ngx_http_upstream_t")
+
+    printf("hit: request_sent:%d, elapsed:%dms", $*u->request_sent,
+            ngx_u_resp_time(u))
+
+    fd = $*u->peer->connection->fd
+
+    sock = sockfd_lookup(fd)
+    $*sock := @cast(sock, "socket", "kernel")
+
+    printf(", sock->state:%d", $*sock->state)
+    state = $*sock->sk->__sk_common->skc_state
+    printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
+}
+
+
+probe begin
+{
+    warn(sprintf("Start tracing user process %d...\nHit Ctrl to end.", target()))
+}

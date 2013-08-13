@@ -1,5 +1,9 @@
 #!/usr/bin/env stap++
 
+# OPS-935
+# Analyze the latency distribution between upstream connect() and
+# the next upstream processing handler.
+
 global connecting
 global stats
 global hits

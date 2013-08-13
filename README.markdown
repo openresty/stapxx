@@ -7,6 +7,7 @@ Synopsis
 ========
 
     $ stap++ -I ./tapset -x 12345 --arg limit=10 samples/ngx-upstream-post-conn.sxx
+    $ stap++ -e 'probe begin { println("hello") exit() }'
 
 Description
 ===========

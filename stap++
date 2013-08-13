@@ -4,14 +4,23 @@ use strict;
 use warnings;
 
 use Getopt::Long qw( GetOptions );
+use File::Spec ();
+use File::Temp qw( tempdir );
 
 GetOptions("D=s%",      \(my $D_opts),
            "arg=s%",    \(my $args),
            "dump-src",  \(my $dump_src),
            "help",      \(my $help),
            "x=i",       \(my $pid),
-           "e=s",       \(my $src))
+           "e=s",       \(my $src),
+           "I=s@",       \(my $Inc))
    or die usage();
+
+if (!$Inc) {
+    @$Inc = '.';
+}
+
+#warn "Inc: @$Inc\n";
 
 if ($^O ne 'linux') {
     die "Only linux is supported but I am on $^O.\n";
@@ -54,16 +63,18 @@ if (!$D_opts->{MAXBACKTRACE}) {
     $D_opts->{MAXBACKTRACE} = 200;
 }
 
+my $infile;
 if (!defined $src) {
-    my $infile = shift
+    $infile = shift
         or die "No input file specified.\n";
-    open my $in, $infile
-        or die "Cannot open $infile for reading: $!\n";
-    $src = do { local $/; <$in> };
-    close $in;
+
+    $src = read_src_file($infile);
+
+} else {
+    $infile = "-e";
 }
 
-my (%StdVars, %UsrVars);
+my (%StdVars, %UsedLibs);
 
 my @stap_opts;
 
@@ -88,34 +99,22 @@ while (my ($k, $v) = each %$args) {
     $StdVars{"arg_$k"} = $v;
 }
 
-my @bits;
-{
-    # process the input file
-    open my $in, '<', \$src or die $!;
-
-    while (<$in>) {
-        if ($. == 1 && /^\#!/) {
-            $_ = "#!/usr/bin/env stap\n";
-            next;
-        }
-
-        s{\$\^(\w+)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($1, $2, $3)}eg;
-        s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$UsrVars{$1} = $2; ""}eg;
-        s{\$\*(\w+)}{eval_usr_var($1)}eg;
-
-    } continue {
-        push @bits, $_;
-    }
-
-    close $in;
-}
-
-my $stap_src = join '', @bits;
-
+my $stap_src = process_src($infile, $src);
 if ($dump_src) {
     print $stap_src;
     exit;
 }
+
+my $tmpdir = tempdir("stapxx-XXXXXXXX", CLEANUP => 1);
+while (my ($lib, $src) = each %UsedLibs) {
+    my $outfile = "$tmpdir/$lib.stp";
+    open my $out, ">$outfile"
+        or die "Cannot open $outfile for writing: $!\n";
+    print $out $src;
+    close $out;
+}
+
+push @stap_opts, "-I$tmpdir";
 
 my $cmd = "stap @stap_opts -";
 #warn $cmd;
@@ -125,16 +124,16 @@ print $in $stap_src;
 close $in;
 
 sub eval_usr_var {
-    my ($var) = @_;
-    if (defined $UsrVars{$var}) {
-        return $UsrVars{$var};
+    my ($file, $usr_vars, $var) = @_;
+    if (defined $usr_vars->{$var}) {
+        return $usr_vars->{$var};
     }
 
-    die "line $.: Undefined user varaible \$*$var.\n";
+    die "$file: line $.: Undefined user varaible \$*$var.\n";
 }
 
 sub eval_std_var {
-    my ($var, $trait_name, $trait_val) = @_;
+    my ($file, $var, $trait_name, $trait_val) = @_;
     if (defined $StdVars{$var}) {
         return $StdVars{$var};
     }
@@ -145,19 +144,73 @@ sub eval_std_var {
             return $trait_val;
 
         } else {
-            die "line $.: unknown trait name: $trait_name\n";
+            die "$file: line $.: unknown trait name: $trait_name\n";
         }
     }
 
     if ($var eq 'exec_path') {
-        die "line $.: \$^exec_path is used but no -x <pid> option is specified.\n";
+        die "$file: line $.: \$^exec_path is used but no -x <pid> option is specified.\n";
 
     } elsif ($var =~ /arg_(\w+)/) {
-        die "line $.: \$^$var is used but no --arg $1=VAL option is specified.\n";
+        die "$file: line $.: \$^$var is used but no --arg $1=VAL option is specified.\n";
 
     } else {
-        die "line $.: Undefined built-in variable \$^$var.\n";
+        die "$file: line $.: Undefined built-in variable \$^$var.\n";
     }
+}
+
+sub read_src_file {
+    my $infile = shift;
+    open my $in, $infile
+        or die "Cannot open $infile for reading: $!\n";
+    my $src = do { local $/; <$in> };
+    close $in;
+    return $src;
+}
+
+sub use_lib {
+    my ($file, $lib) = @_;
+    my $path = join("/", split /\./, $lib) . ".sxx";
+    #warn $path;
+    for my $dir (@$Inc) {
+        my $abspath = File::Spec->catfile($dir, $path);
+        #warn "Testing $abspath\n";
+        #warn "exist: ", (-f $abspath) ? 1 : 0;
+        if (-f $abspath) {
+            my $src = read_src_file($abspath);
+            $UsedLibs{$lib} = process_src($abspath, $src);
+            return "";
+        }
+    }
+    die "$file: line $.: cannot find \@use library $lib\n";
+}
+
+sub process_src {
+    my ($file, $src) = @_;
+
+    my %usr_vars;
+    my @bits;
+
+    # process the input file
+    open my $in, '<', \$src or die $!;
+
+    while (<$in>) {
+        if ($. == 1 && /^\#!/) {
+            $_ = "#!/usr/bin/env stap\n";
+            next;
+        }
+
+        s{\$\^(\w+)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($file, $1, $2, $3)}eg;
+        s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$usr_vars{$1} = $2; ""}eg;
+        s{\$\*(\w+)}{eval_usr_var($file, \%usr_vars, $1)}eg;
+        s{\@use\s+(\w+(?:\.\w+)*)}{use_lib($file, $1)}eg;
+
+    } continue {
+        push @bits, $_;
+    }
+
+    close $in;
+    return join '', @bits;
 }
 
 sub usage {
@@ -170,6 +223,7 @@ Options:
     -e SCRIPT       Run given script.
     -D NM=VAL       emit macro definition into generated C code.
     --help          Print this help.
+    -I PATH         Specify the stap++ tapset library search directory.
     -x PID          sets target() to PID (also for $^exec_path and $^libxxx_path).
 
 Examples:

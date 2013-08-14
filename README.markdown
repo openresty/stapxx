@@ -32,6 +32,20 @@ Here is an example:
 
     probe process("$^exec_path").function("blah") { ... }
 
+### $^libNAME_path
+
+This variable expands to the absolute path of the DSO library file specified by a pattern.
+
+`stap++` automatically scans all the loaded DSO files in the running process (if the `-x PID` option is specified) to find a match. If it fails to find a match, this variable will take the value of `$^exec_path`, that is, assuming the library is statically linked.
+
+Below is an example for tracing a user-land function in the libpcre library:
+
+    probe process("$^libpcre_path").statement("pcre_exec")
+    {
+        println("pcre_exec called")
+        print_ubacktrace()
+    }
+
 ### $^arg_NAME
 
 This variable can evaluate to the value of a specified command-line argument. For example, `$^arg_limit` is evaluated to the value of the command line argument `limit` specified like this:

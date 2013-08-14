@@ -13,7 +13,7 @@ GetOptions("D=s%",      \(my $D_opts),
            "help",      \(my $help),
            "x=i",       \(my $pid),
            "e=s",       \(my $src),
-           "I=s@",       \(my $Inc))
+           "I=s@",      \(my $Inc))
    or die usage();
 
 if (!$Inc) {
@@ -74,7 +74,7 @@ if (!defined $src) {
     $infile = "-e";
 }
 
-my (%StdVars, %UsedLibs);
+my (%StdVars, %UsedLibs, %DSOs, %LibPaths);
 
 my @stap_opts;
 
@@ -92,6 +92,24 @@ if (defined $pid) {
 
     my $exec_path = readlink $exec_file;
     $StdVars{exec_path} = $exec_path;
+    push @stap_opts, "-d $exec_path";
+
+    # process DSO files
+    my $maps_file = "/proc/$pid/maps";
+    open my $in, $maps_file
+        or die "Cannot open $maps_file for reading: $!\n";
+
+    while (<$in>) {
+        if (m{\S+\blib\w+[^/\s]*?\.so(?:\.\d+)*$}) {
+            my $path = $&;
+            $DSOs{$path} = 1;
+            #warn "seeing $path";
+        }
+    }
+
+    for my $path (sort keys %DSOs) {
+        push @stap_opts, "-d $path";
+    }
 }
 
 while (my ($k, $v) = each %$args) {
@@ -151,12 +169,46 @@ sub eval_std_var {
     if ($var eq 'exec_path') {
         die "$file: line $.: \$^exec_path is used but no -x <pid> option is specified.\n";
 
-    } elsif ($var =~ /arg_(\w+)/) {
+    } elsif ($var =~ /^arg_(\w+)$/) {
         die "$file: line $.: \$^$var is used but no --arg $1=VAL option is specified.\n";
+
+    } elsif ($var =~ /^(lib\w+)_path$/) {
+        my $prefix = $1;
+        my $libpath = find_dso_path($prefix);
+        if (!$libpath) {
+            warn "$file: line $.: $prefix is not found, assuming it is statically linked.\n";
+            if (!defined $StdVars{exec_path}) {
+                die "No -x <pid> option is specified.\n";
+            }
+
+            $LibPaths{$pat} = $StdVars{exec_path};
+            return $StdVars{exec_path};
+        }
+
+        return $libpath;
 
     } else {
         die "$file: line $.: Undefined built-in variable \$^$var.\n";
     }
+}
+
+sub find_dso_path {
+    my $pat = shift;
+
+    my $path = $LibPaths{$pat};
+    if ($path) {
+        return $path;
+    }
+
+    for my $path (keys %DSOs) {
+        warn "checking $path against $pat";
+        if ($path =~ m{\b\Q$pat\E[^/\s]*?\.so(?:\.\d+)*$}) {
+            $LibPaths{$pat} = $path;
+            return $path;
+        }
+    }
+
+    return undef;
 }
 
 sub read_src_file {
@@ -200,7 +252,7 @@ sub process_src {
             next;
         }
 
-        s{\$\^(\w+)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($file, $1, $2, $3)}eg;
+        s{\$\^(\w+|lib[-.\w]+_path)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($file, $1, $2, $3)}eg;
         s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$usr_vars{$1} = $2; ""}eg;
         s{\$\*(\w+)}{eval_usr_var($file, \%usr_vars, $1)}eg;
         s{\@use\s+(\w+(?:\.\w+)*)}{use_lib($file, $1)}eg;

@@ -101,7 +101,7 @@ Finally, we should invoke the `stap++` interpreter like this:
 
     stap++ -I ./tapset foo.sxx ...
 
-Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules.
+Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules. The default module search paths are `.`, and `<bin-dir>/tapset`, where `<bin-dir>` is the directory where `stap++` sits in.
 
 Unlike `stap`, only the used stapset modules are processed so as to reduce startup time.
 

@@ -6,6 +6,7 @@ use warnings;
 use Getopt::Long qw( GetOptions );
 use File::Spec ();
 use File::Temp qw( tempdir );
+use FindBin ();
 
 GetOptions("D=s%",      \(my $D_opts),
            "arg=s%",    \(my $args),
@@ -16,9 +17,7 @@ GetOptions("D=s%",      \(my $D_opts),
            "I=s@",      \(my $Inc))
    or die usage();
 
-if (!$Inc) {
-    @$Inc = '.';
-}
+push @$Inc, '.', "$FindBin::Bin/tapset";
 
 #warn "Inc: @$Inc\n";
 

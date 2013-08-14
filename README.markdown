@@ -20,8 +20,8 @@ not affect the source line numbers so that the line numbers reported by `stap` a
 Features
 ========
 
-Standard Builtin Variables
---------------------------
+Standard Macro Variables
+------------------------
 
 ### $^exec_path
 
@@ -40,7 +40,7 @@ This variable can evaluate to the value of a specified command-line argument. Fo
 
 ### Default values
 
-It's possible to specify a default value for a built-in variale by means of the `default` trait, as in
+It's possible to specify a default value for a macro variale by means of the `default` trait, as in
 
     foreach (key in stats- limit $^arg_limit :default(1000)) {
         ...
@@ -48,8 +48,8 @@ It's possible to specify a default value for a built-in variale by means of the 
 
 where `$^arg_limit` takes the default value 1000 when the user does not specify the `--arg limit=N` command-line option while invoking `stap++`.
 
-User-defined Builtin Variables
-------------------------------
+User-defined Macro Variables
+----------------------------
 
 It's possible to bind a `@cast()` expression to a user-defined bultin variable of the form `$*NAME`. Here is an example,
 
@@ -90,6 +90,13 @@ Finally, we should invoke the `stap++` interpreter like this:
 Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules.
 
 Unlike `stap`, only the used stapset modules are processed so as to reduce startup time.
+
+One can `@use` multiple modules like this
+
+    @use kernel.socket
+    @use nginx.upstream
+
+All those macro variables are free to use in the tapset module files.
 
 Author
 ======

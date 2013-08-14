@@ -1,7 +1,7 @@
 NAME
 ====
 
-stap++ - Simple macro language extentions to systemtap
+stap++ - Simple macro language extensions to systemtap
 
 Synopsis
 ========
@@ -25,7 +25,7 @@ Standard Macro Variables
 
 ### $^exec_path
 
-The variable `$^exec_path` is always evaluted to the path to the executable file
+The variable `$^exec_path` is always evaluated to the path to the executable file
 for the pid specified by the `-x` option.
 
 Here is an example:
@@ -54,7 +54,7 @@ This variable can evaluate to the value of a specified command-line argument. Fo
 
 ### Default values
 
-It's possible to specify a default value for a macro variale by means of the `default` trait, as in
+It's possible to specify a default value for a macro variable by means of the `default` trait, as in
 
     foreach (key in stats- limit $^arg_limit :default(1000)) {
         ...
@@ -65,7 +65,7 @@ where `$^arg_limit` takes the default value 1000 when the user does not specify 
 User-defined Macro Variables
 ----------------------------
 
-It's possible to bind a `@cast()` expression to a user-defined bultin variable of the form `$*NAME`. Here is an example,
+It's possible to bind a `@cast()` expression to a user-defined builtin variable of the form `$*NAME`. Here is an example,
 
     sock = sockfd_lookup(fd)
     $*sock := @cast(sock, "socket", "kernel")

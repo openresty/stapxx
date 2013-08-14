@@ -21,3 +21,11 @@ function sockfd_lookup(fd)
 
     return $*file->private_data
 }
+
+
+function socket_tcp_state(socket)
+{
+    $*socket := @cast(socket, "struct socket", "kernel")
+    state = $*socket->sk->__sk_common->skc_state
+    return tcp_sockstate_str(state)
+}

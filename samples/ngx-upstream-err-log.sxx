@@ -19,13 +19,8 @@ probe process("$^exec_path").statement("*@ngx_http_upstream.c:1762")
             ngx_u_resp_time(u))
 
     fd = $*u->peer->connection->fd
-
-    sock = sockfd_lookup(fd)
-    $*sock := @cast(sock, "socket", "kernel")
-
-    printf(", sock->state:%d", $*sock->state)
-    state = $*sock->sk->__sk_common->skc_state
-    printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
+    socket = sockfd_lookup(fd)
+    printf(", tcp-state:%s\n", socket_tcp_state(socket))
 }
 
 

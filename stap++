@@ -181,7 +181,7 @@ sub eval_std_var {
                 die "No -x <pid> option is specified.\n";
             }
 
-            $LibPaths{$pat} = $StdVars{exec_path};
+            $LibPaths{$prefix} = $StdVars{exec_path};
             return $StdVars{exec_path};
         }
 
@@ -201,7 +201,7 @@ sub find_dso_path {
     }
 
     for my $path (keys %DSOs) {
-        warn "checking $path against $pat";
+        #warn "checking $path against $pat";
         if ($path =~ m{\b\Q$pat\E[^/\s]*?\.so(?:\.\d+)*$}) {
             $LibPaths{$pat} = $path;
             return $path;

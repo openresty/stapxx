@@ -65,7 +65,7 @@ where `$^arg_limit` takes the default value 1000 when the user does not specify 
 User-defined Macro Variables
 ----------------------------
 
-It's possible to bind a `@cast()` expression to a user-defined builtin variable of the form `$*NAME`. Here is an example,
+It's possible to bind a `@cast()` expression to a user-defined macro variable of the form `$*NAME`. Here is an example,
 
     sock = sockfd_lookup(fd)
     $*sock := @cast(sock, "socket", "kernel")

@@ -1,0 +1,46 @@
+#!/usr/bin/env stap++
+
+# OPS-935
+# Measure the blocking effect in an event loop driven by epoll_wait and
+# also check how much VFS (file IO) latency is contributed to each blocking period.
+#
+# Accept the argument "limit" for the blocking time threshold,
+# which defaults to 200 (ms).
+
+
+global epoll_begin
+global vfs_begin
+global vfs_latency
+
+probe vfs.read, vfs.write {
+    if (target() == pid()) {
+        vfs_begin = gettimeofday_us()
+    }
+}
+
+probe vfs.read.return, vfs.write.return {
+    if (target() == pid()) {
+        vfs_latency += gettimeofday_us() - vfs_begin
+    }
+}
+
+probe syscall.epoll_wait.return {
+    if (target() == pid()) {
+        epoll_begin = gettimeofday_ms()
+        vfs_latency = 0
+    }
+}
+
+probe syscall.epoll_wait {
+    if (target() == pid() && epoll_begin > 0) {
+        elapsed = gettimeofday_ms() - epoll_begin
+        if (elapsed > $^arg_limit :default(200)) {
+            printf("[%d] epoll_wait blocked for %dms (file IO: %dms)\n",
+                   gettimeofday_s(), elapsed, vfs_latency / 1000)
+        }
+    }
+}
+
+probe begin {
+    printf("Start tracing %d...\n", target())
+}

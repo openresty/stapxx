@@ -18,7 +18,7 @@ probe syscall.epoll_wait {
     if (target() == pid() && begin > 0) {
         elapsed = gettimeofday_ms() - begin
         if (elapsed >= $^arg_limit :default(200)) {
-            printf("[%d] epoll_wait blocked for %dms\n",
+            printf("[%d] epoll loop blocked for %dms\n",
                    gettimeofday_s(), elapsed)
         }
     }

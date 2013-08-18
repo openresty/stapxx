@@ -39,7 +39,7 @@ probe syscall.epoll_wait {
     if (target() == pid() && epoll_begin > 0) {
         elapsed = gettimeofday_ms() - epoll_begin
         if (elapsed > $^arg_limit :default(200)) {
-            printf("[%d] epoll_wait blocked for %dms (file IO: %dms)\n",
+            printf("[%d] epoll loop blocked for %dms (file IO: %dms)\n",
                    gettimeofday_s(), elapsed, vfs_latency / 1000)
         }
     }

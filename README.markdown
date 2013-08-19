@@ -110,6 +110,10 @@ One can `@use` multiple modules like this
     @use kernel.socket
     @use nginx.upstream
 
+or equivalently,
+
+    @use kernel.socket, nginx.upstream
+
 All those macro variables are free to use in the tapset module files.
 
 Author

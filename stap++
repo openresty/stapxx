@@ -156,8 +156,9 @@ sub eval_std_var {
     }
 
     if (defined $trait_name) {
+        #warn "trait: $trait_name";
         if ($trait_name eq 'default') {
-            $StdVars{$trait_name} = $trait_val;
+            $StdVars{$var} = $trait_val;
             return $trait_val;
 
         } else {

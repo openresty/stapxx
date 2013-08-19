@@ -1,0 +1,38 @@
+#!/usr/bin/env stap++
+
+# Measure the distribution of the blocking latency in an event loop
+# driven by epoll_wait.
+
+global begin, stats
+
+probe syscall.epoll_wait.return {
+    if (target() == pid()) {
+        begin = gettimeofday_ms()
+    }
+}
+
+probe syscall.epoll_wait {
+    if (target() == pid() && begin > 0) {
+        stats <<< gettimeofday_ms() - begin
+    }
+}
+
+probe timer.s($^arg_time :default(5)) {
+    exit()
+}
+
+probe end {
+    if (begin == 0) {
+        printf("No samples observed so far.\n");
+
+    } else {
+        printf("Distribution of epoll loop blocking latencies (in microseconds)\n")
+        printf("max/avg/min: %d/%d/%d\n", @max(stats), @avg(stats), @min(stats))
+        print(@hist_log(stats))
+    }
+}
+
+probe begin {
+    printf("Start tracing %d...\nPlease wait for %d seconds.\n\n",
+           target(), $^arg_time)
+}

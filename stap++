@@ -8,13 +8,14 @@ use File::Spec ();
 use File::Temp qw( tempdir );
 use FindBin ();
 
-GetOptions("D=s%",      \(my $D_opts),
-           "arg=s%",    \(my $args),
-           "dump-src",  \(my $dump_src),
-           "help",      \(my $help),
-           "x=i",       \(my $pid),
-           "e=s",       \(my $src),
-           "I=s@",      \(my $Inc))
+GetOptions("D=s%",          \(my $D_opts),
+           "arg=s%",        \(my $args),
+           "dump-src",      \(my $dump_src),
+           "help",          \(my $help),
+           "x=i",           \(my $pid),
+           "e=s",           \(my $src),
+           "skip-badvars",  \(my $skip_badvars),
+           "I=s@",          \(my $Inc))
    or die usage();
 
 push @$Inc, '.', "$FindBin::Bin/tapset";
@@ -76,6 +77,10 @@ if (!defined $src) {
 my (%StdVars, %UsedLibs, %DSOs, %LibPaths);
 
 my @stap_opts;
+
+if (defined $skip_badvars) {
+    push @stap_opts, "--skip-badvars";
+}
 
 while (my ($k, $v) = each %$D_opts) {
     push @stap_opts, "-D$k=$v";

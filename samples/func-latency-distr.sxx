@@ -1,0 +1,41 @@
+#!/usr/bin/env stap++
+
+# Dump the latency distribution of any function-like probe specified by
+# the --arg func=FUNC option.
+
+global begin, stats, func
+
+probe $^arg_func {
+    if (pid() == target()) {
+        begin = gettimeofday_us()
+        if (func == "") {
+            func = probefunc()
+        }
+    }
+}
+
+probe $^arg_func.return {
+    if (pid() == target() && begin > 0) {
+        stats <<< gettimeofday_us() - begin
+    }
+}
+
+probe timer.s($^arg_time :default(5)) {
+    exit()
+}
+
+probe end {
+    if (begin == 0) {
+        printf("No samples observed so far.\n");
+
+    } else {
+        printf("Distribution of %s latencies (in microseconds)\n", func)
+        printf("max/avg/min: %d/%d/%d\n", @max(stats), @avg(stats), @min(stats))
+        print(@hist_log(stats))
+    }
+}
+
+probe begin {
+    printf("Start tracing %d...\nPlease wait for %d seconds.\n\n",
+           target(), $^arg_time)
+}

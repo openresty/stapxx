@@ -1,0 +1,30 @@
+#!/usr/bin/env stap++
+
+global misses, total, in_ctx
+
+probe @pfunc(ngx_open_cached_file) {
+    if (pid() == target()) {
+        in_ctx = 1
+        total++
+    }
+}
+
+probe @pfunc(ngx_open_cached_file).return {
+    if (pid() == target()) {
+        in_ctx = 0
+    }
+}
+
+probe @pfunc(ngx_open_and_stat_file) {
+    if (pid() == target() && in_ctx) {
+        misses++
+    }
+}
+
+probe end {
+    printf("nginx open file cache miss rate: %d%%\n", misses * 100 / total)
+}
+
+probe begin {
+    warn(sprintf("Start tracing process %d...\nHit Ctrl-C to end.", target()))
+}

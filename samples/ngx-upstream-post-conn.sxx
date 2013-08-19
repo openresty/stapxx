@@ -8,15 +8,15 @@ global connecting
 global stats
 global hits
 
-probe process("$^exec_path").function("ngx_http_upstream_connect")
+probe @pfunc(ngx_http_upstream_connect)
 {
     connecting[$r] = gettimeofday_us()
 }
 
-probe process("$^exec_path").function("ngx_http_upstream_finalize_request"),
-      process("$^exec_path").function("ngx_http_upstream_send_request"),
-      process("$^exec_path").function("ngx_http_upstream_next"),
-      process("$^exec_path").function("ngx_http_upstream_process_header")
+probe @pfunc(ngx_http_upstream_finalize_request),
+      @pfunc(ngx_http_upstream_send_request),
+      @pfunc(ngx_http_upstream_next),
+      @pfunc(ngx_http_upstream_process_header)
 {
     begin = connecting[$r]
     if (begin) {

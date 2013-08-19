@@ -259,6 +259,7 @@ sub process_src {
             next;
         }
 
+        s{\@pfunc\s*\(\s*(\w+)\s*\)}{process("\$^exec_path").function("$1")}g;
         s{\$\^(\w+|lib[-.\w]+_path)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($file, $1, $2, $3)}eg;
         s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$usr_vars{$1} = $2; ""}eg;
         s{\$\*(\w+)}{eval_usr_var($file, \%usr_vars, $1)}eg;

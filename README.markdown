@@ -116,6 +116,29 @@ or equivalently,
 
 All those macro variables are free to use in the tapset module files.
 
+Shorthands
+----------
+
+### @pfunc(FUNCTION)
+
+This is equivalent to `process("$^exec_path").function("FUNCTION").
+
+For example,
+
+    probe @pfunc(ngx_http_upstream_finalize_request),
+          @pfunc(ngx_http_upstream_send_request)
+    {
+        ...
+    }
+
+is equivalent to
+
+    probe process("$^exec_path").function("ngx_http_upstream_finalize_request"),
+          process("$^exec_path").function("ngx_http_upstream_send_request")
+    {
+        ...
+    }
+
 Author
 ======
 

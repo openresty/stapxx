@@ -5,8 +5,7 @@
 # "upstream prematurely closed connection while reading response header"
 
 
-@use kernel.socket
-@use nginx.upstream
+@use kernel.socket, nginx.upstream
 
 
 probe process("$^exec_path").statement("*@ngx_http_upstream.c:1762")

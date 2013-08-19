@@ -219,21 +219,28 @@ sub read_src_file {
     return $src;
 }
 
-sub use_lib {
-    my ($file, $lib) = @_;
-    my $path = join("/", split /\./, $lib) . ".sxx";
-    #warn $path;
-    for my $dir (@$Inc) {
-        my $abspath = File::Spec->catfile($dir, $path);
-        #warn "Testing $abspath\n";
-        #warn "exist: ", (-f $abspath) ? 1 : 0;
-        if (-f $abspath) {
-            my $src = read_src_file($abspath);
-            $UsedLibs{$lib} = process_src($abspath, $src);
-            return "";
+sub use_libs {
+    my ($file, $libs) = @_;
+    #warn "libs: $libs";
+    my @libs = split /\s*,\s*/, $libs;
+    for my $lib (@libs) {
+        #warn "processing $lib...";
+        my $path = join("/", split /\./, $lib) . ".sxx";
+        #warn $path;
+        for my $dir (@$Inc) {
+            my $abspath = File::Spec->catfile($dir, $path);
+            #warn "Testing $abspath\n";
+            #warn "exist: ", (-f $abspath) ? 1 : 0;
+            if (-f $abspath) {
+                my $src = read_src_file($abspath);
+                $UsedLibs{$lib} = process_src($abspath, $src);
+                goto next_lib;
+            }
         }
+        die "$file: line $.: cannot find \@use library $lib\n";
+next_lib:
     }
-    die "$file: line $.: cannot find \@use library $lib\n";
+    return "";
 }
 
 sub process_src {
@@ -242,6 +249,7 @@ sub process_src {
     my %usr_vars;
     my @bits;
 
+    my $libname_pat = qr/(?:\w+(?:\.\w+)*)/;
     # process the input file
     open my $in, '<', \$src or die $!;
 
@@ -254,7 +262,7 @@ sub process_src {
         s{\$\^(\w+|lib[-.\w]+_path)(?:\s*:(\w+)\s*\((.*?)\))?}{eval_std_var($file, $1, $2, $3)}eg;
         s{\$\*(\w+)\s*:=\s*(\@cast\(.*?\))}{$usr_vars{$1} = $2; ""}eg;
         s{\$\*(\w+)}{eval_usr_var($file, \%usr_vars, $1)}eg;
-        s{\@use\s+(\w+(?:\.\w+)*)}{use_lib($file, $1)}eg;
+        s{\@use\s+($libname_pat(?:\s*,\s*$libname_pat)*)}{use_libs($file, $1)}eg;
 
     } continue {
         push @bits, $_;

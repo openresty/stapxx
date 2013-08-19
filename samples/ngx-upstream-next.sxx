@@ -2,12 +2,13 @@
 
 # Print out attempts to retry server connect().
 
-global in_next, ft_type
+global in_next, ft_type, peer_name
 
 probe @pfunc(ngx_http_upstream_next) {
     if (target() == pid()) {
         in_next = 1
         ft_type = $ft_type
+        peer_name = user_string_n($u->peer->name->data, $u->peer->name->len)
     }
 }
 
@@ -22,7 +23,7 @@ probe @pfunc(ngx_http_upstream_connect) {
     if (target() == pid() && in_next) {
         printf("retrying: oldpeer=\"%s%s\" ft_type=0x%x status=%d tries=%d\n",
                user_string_n($u->schema->data, $u->schema->len),
-               user_string_n($u->peer->name->data, $u->peer->name->len),
+               peer_name,
                ft_type, $u->state->status, $u->peer->tries)
     }
 }

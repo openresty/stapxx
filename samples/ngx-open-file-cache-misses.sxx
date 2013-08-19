@@ -22,7 +22,12 @@ probe @pfunc(ngx_open_and_stat_file) {
 }
 
 probe end {
-    printf("nginx open file cache miss rate: %d%%\n", misses * 100 / total)
+    if (total == 0) {
+        printf("no samples observed.\n")
+
+    } else {
+        printf("nginx open file cache miss rate: %d%%\n", misses * 100 / total)
+    }
 }
 
 probe begin {

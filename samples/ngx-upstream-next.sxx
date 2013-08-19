@@ -1,0 +1,32 @@
+#!/usr/bin/env stap++
+
+# Print out attempts to retry server connect().
+
+global in_next, ft_type
+
+probe @pfunc(ngx_http_upstream_next) {
+    if (target() == pid()) {
+        in_next = 1
+        ft_type = $ft_type
+    }
+}
+
+probe @pfunc(ngx_http_upstream_next).return {
+    if (target() == pid()) {
+        in_next = 0
+        ft_type = 0
+    }
+}
+
+probe @pfunc(ngx_http_upstream_connect) {
+    if (target() == pid() && in_next) {
+        printf("retrying: oldpeer=\"%s%s\" ft_type=0x%x status=%d tries=%d\n",
+               user_string_n($u->schema->data, $u->schema->len),
+               user_string_n($u->peer->name->data, $u->peer->name->len),
+               ft_type, $u->state->status, $u->peer->tries)
+    }
+}
+
+probe begin {
+    warn(sprintf("Tracing process %d.\nHit Ctrl-C to end.\n", target()))
+}

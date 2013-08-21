@@ -26,7 +26,7 @@ probe end {
         printf("No samples observed so far.\n");
 
     } else {
-        printf("Distribution of epoll loop blocking latencies (in microseconds)\n")
+        printf("Distribution of epoll loop blocking latencies (in milliseconds)\n")
         printf("max/avg/min: %d/%d/%d\n", @max(stats), @avg(stats), @min(stats))
         print(@hist_log(stats))
     }

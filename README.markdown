@@ -162,6 +162,8 @@ worker process specified by its pid:
 
 The numbers in the leading square brackets are the current timestamp (seconds since the Epoch).
 
+Behind the scene, the Nginx main requests' completion events are traced.
+
 Author
 ======
 

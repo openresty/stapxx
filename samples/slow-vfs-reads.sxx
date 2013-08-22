@@ -17,7 +17,7 @@ probe vfs.read {
 probe vfs.read.return {
     if (pid() == target() && begin > 0) {
         elapsed = gettimeofday_ms() - begin
-        if (elapsed > 100) {
+        if (elapsed > $^arg_limit :default(100)) {
             printf("[%d] latency=%dms dev=%s bytes_read=%d err=%d errstr=%s\n",
                    gettimeofday_s(), elapsed, devname, bytes_read,
                    error, error_str)

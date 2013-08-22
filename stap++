@@ -74,7 +74,7 @@ if (!defined $src) {
     $infile = "-e";
 }
 
-my (%StdVars, %UsedLibs, %DSOs, %LibPaths);
+my (%StdVars, %UsedLibs, %DSOs, %LibPaths, %UsedStdVars);
 
 my @stap_opts;
 
@@ -127,6 +127,17 @@ if ($dump_src) {
     exit;
 }
 
+for my $key (keys %$args) {
+    if (!$UsedStdVars{$key}) {
+        my $val = $args->{$key};
+        if (!defined $val) {
+            $val = '';
+        }
+        warn "WARNING: \$^arg_$key is defined by \"--arg $key=$val\", "
+             ."but never used.\n";
+    }
+}
+
 my $tmpdir = tempdir("stapxx-XXXXXXXX", CLEANUP => 1);
 while (my ($lib, $src) = each %UsedLibs) {
     my $outfile = "$tmpdir/$lib.stp";
@@ -156,6 +167,9 @@ sub eval_usr_var {
 
 sub eval_std_var {
     my ($file, $var, $trait_name, $trait_val) = @_;
+
+    $UsedStdVars{$var} = 1;
+
     if (defined $StdVars{$var}) {
         return $StdVars{$var};
     }

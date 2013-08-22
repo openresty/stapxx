@@ -139,6 +139,29 @@ is equivalent to
         ...
     }
 
+Samples
+=======
+
+ngx-rps
+-------
+
+Calculate the current number of requests per second handled by the Nginx
+worker process specified by its pid:
+
+    # assuming one nginx worker process has the pid 19647.
+    $ ./stap++ ./samples/ngx-rps.sxx -x 19647
+    WARNING: Tracing process 19647.
+    Hit Ctrl-C to end.
+    [1376939543] 300 req/sec
+    [1376939544] 235 req/sec
+    [1376939545] 235 req/sec
+    [1376939546] 166 req/sec
+    [1376939547] 238 req/sec
+    [1376939548] 234 req/sec
+    ^C
+
+The numbers in the leading square brackets are the current timestamp (seconds since the Epoch).
+
 Author
 ======
 

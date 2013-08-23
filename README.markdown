@@ -148,8 +148,11 @@ ngx-rps
 Calculate the current number of requests per second handled by the Nginx
 worker process specified by its pid:
 
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:PATH
+
     # assuming one nginx worker process has the pid 19647.
-    $ ./stap++ ./samples/ngx-rps.sxx -x 19647
+    $ ./samples/ngx-rps.sxx -x 19647
     WARNING: Tracing process 19647.
     Hit Ctrl-C to end.
     [1376939543] 300 req/sec

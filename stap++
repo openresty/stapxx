@@ -128,7 +128,7 @@ if ($dump_src) {
 }
 
 for my $key (keys %$args) {
-    if (!$UsedStdVars{$key}) {
+    if (!$UsedStdVars{"arg_$key"}) {
         my $val = $args->{$key};
         if (!defined $val) {
             $val = '';

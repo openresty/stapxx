@@ -1,0 +1,53 @@
+#!/usr/bin/env stap++
+
+global pages, active
+global total_paged
+global miss
+global misses
+
+probe $^arg_probe :default(vfs.read) {
+    if (pid() == target()) {
+        active = 1
+        pages = 0
+    }
+}
+
+probe vfs.add_to_page_cache.return {
+    if (pid() == target() && active) {
+        //printf("nrpages: %d, size: %d\n", $mapping->nrpages, size)
+        pages += size
+        miss = 1
+    }
+}
+
+probe $^arg_probe.return {
+    if (pid() == target() && active) {
+        active = 0
+
+        total_paged <<< pages
+
+        if (miss) {
+            misses <<< 1
+            miss = 0
+
+        } else {
+            misses <<< 0
+        }
+    }
+}
+
+probe end {
+    total = @count(misses)
+    if (total == 0) {
+        printf("\nNo $^arg_probe observed so far.\n")
+
+    } else {
+        printf("\n%d $^arg_probe operations, %d pages added (page size: %dB), page cache miss rate: %d%%\n",
+               total, @sum(total_paged), mem_page_size(),
+               @sum(misses) * 100 / total)
+    }
+}
+
+probe begin {
+    printf("Tracing %d...\nHit Ctrl-C to end.\n\n", target())
+}

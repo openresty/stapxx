@@ -36,15 +36,18 @@ probe $^arg_probe.return {
     }
 }
 
-probe end {
+probe timer.s($^arg_period :default(2)) {
     total = @count(misses)
     if (total == 0) {
-        printf("\nNo $^arg_probe observed so far.\n")
+        printf("No $^arg_probe observed in the last $^arg_period seconds.\n")
 
     } else {
-        printf("\n%d $^arg_probe operations, %d pages added (page size: %dB), page cache miss rate: %d%%\n",
+        printf("%d $^arg_probe operations, %d pages added (page size: %dB), page cache miss rate: %d%%\n",
                total, @sum(total_paged), mem_page_size(),
                @sum(misses) * 100 / total)
+
+        delete misses
+        delete total_paged
     }
 }
 

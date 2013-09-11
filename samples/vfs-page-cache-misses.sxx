@@ -1,5 +1,8 @@
 #!/usr/bin/env stap++
 
+# Inspired by Josh Stone's stap script posted on the systemtap
+# mailing list: https://sourceware.org/ml/systemtap/2011-q2/msg00157.html
+
 global pages, active
 global total_paged
 global miss

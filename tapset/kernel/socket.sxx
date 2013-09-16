@@ -37,7 +37,7 @@ function socket_inet_dport(socket)
     sk = $*socket->sk
     if (sk) {
         $*inet := @cast(sk, "struct inet_sock")
-        return ntohs($*inet->inet_dport)
+        return ntohs(@choose_defined($*inet->__sk_common->skc_dport, $*inet->inet_dport))
     }
     return 0
 }

@@ -31,13 +31,17 @@ function socket_tcp_state(socket)
 }
 
 
-function socket_inet_dport(socket)
+function socket_dport(socket)
 {
     $*socket := @cast(socket, "struct socket", "kernel")
     sk = $*socket->sk
-    if (sk) {
-        $*inet := @cast(sk, "struct inet_sock")
-        return ntohs(@choose_defined($*inet->__sk_common->skc_dport, $*inet->inet_dport))
-    }
-    return 0
+    return __tcp_sock_dport(sk)
+}
+
+
+function socket_sport(socket)
+{
+    $*socket := @cast(socket, "struct socket", "kernel")
+    sk = $*socket->sk
+    return __tcp_sock_sport(sk)
 }

@@ -65,7 +65,7 @@ where `$^arg_limit` takes the default value 1000 when the user does not specify 
 User-defined Macro Variables
 ----------------------------
 
-It's possible to bind a `@cast()` expression to a user-defined macro variable of the form `$*NAME`. Here is an example,
+It's possible to bind a `@cast()` or `@var()` expression to a user-defined macro variable of the form `$*NAME`. Here is an example,
 
     sock = sockfd_lookup(fd)
     $*sock := @cast(sock, "socket", "kernel")
@@ -74,7 +74,7 @@ It's possible to bind a `@cast()` expression to a user-defined macro variable of
     state = $*sock->sk->__sk_common->skc_state
     printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
 
-Note that we used the `:=` operator to bind a `@cast()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` expression.
+Note that we used the `:=` operator to bind a `@cast()` or `@var()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` or `@var()` expression.
 
 The scope of user variables is always limited to the current `.sxx` source file.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env stap++
 
-@use nginx.string, kernel.socket
+@use kernel.socket
 
 global read_timers, write_timers
 

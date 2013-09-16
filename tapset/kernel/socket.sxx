@@ -29,3 +29,15 @@ function socket_tcp_state(socket)
     state = $*socket->sk->__sk_common->skc_state
     return tcp_sockstate_str(state)
 }
+
+
+function socket_inet_dport(socket)
+{
+    $*socket := @cast(socket, "struct socket", "kernel")
+    sk = $*socket->sk
+    if (sk) {
+        $*inet := @cast(sk, "struct inet_sock")
+        return ntohs($*inet->inet_dport)
+    }
+    return 0
+}

@@ -1,0 +1,86 @@
+#!/usr/bin/env stap++
+
+@use nginx.string, kernel.socket
+
+global read_timers, write_timers
+
+probe timer.profile, @pfunc(ngx_process_events_and_timers) {
+    if (pid() == target()) {
+        $*cycle := @var("ngx_cycle@ngx_cycle.c", "$^exec_path")
+
+        conns = $*cycle->connections
+        $*conns := @cast(conns, "ngx_connection_t", "$^exec_path")
+        if (!conns) {
+            error("No connections found.\n")
+        }
+
+        conn_n = $*cycle->connection_n
+
+        for (i = 0; i < conn_n; i++) {
+            c = &$*conns[i]
+            $*c := @cast(c, "ngx_connection_t", "$^exec_path")
+            fd = $*c->fd
+            now = 0
+            addr_text = 0
+            if (fd > 0 && !$*c->destroyed) {
+                read = $*c->read
+                $*read := @cast(read, "ngx_event_t", "$^exec_path")
+
+                if (read && $*read->active && !$*read->eof && !$*read->timedout) {
+                    if ($*read->timer_set) {
+                        now = gettimeofday_ms()
+                        socket = sockfd_lookup(fd)
+                        addr_text = socket_inet_dport(socket)
+                        read_timers[addr_text] <<< ($*read->timer->key - now);
+                    }
+                }
+
+                write = $*c->write
+                $*write := @cast(write, "ngx_event_t", "$^exec_path")
+
+                if (write && $*write->active && !$*write->eof && !$*write->timedout) {
+                    if ($*write->timer_set) {
+                        if (!now) {
+                            now = gettimeofday_ms()
+                        }
+                        if (addr_text == 0 && $*c->sockaddr) {
+                            socket = sockfd_lookup(fd)
+                            addr_text = socket_inet_dport(socket)
+                        }
+                        write_timers[addr_text] <<< ($*write->timer->key - now);
+                    }
+                }
+            }
+        }
+
+        foreach (addr_text in read_timers- limit 10) {
+            printf("Target port %d\n", addr_text)
+            printf("================\n")
+            cnt = @count(read_timers[addr_text])
+            printf("reading connections: %d\n", cnt)
+            printf("remaining time (before timeout) distribution (in milliseconds):\n")
+            printf("(min/avg/max: %d/%d/%d)\n", @min(read_timers[addr_text]),
+                   @avg(read_timers[addr_text]), @max(read_timers[addr_text]))
+            print(@hist_log(read_timers[addr_text]))
+        }
+
+        foreach (addr_text in write_timers- limit 10) {
+            printf("Target port %d\n", addr_text)
+            cnt = @count(write_timers[addr_text])
+            printf("writing connections: %d\n", cnt)
+            printf("Remaining time (before timeout) distribution (us):\n")
+            printf("(min/avg/max: %d/%d/%d)\n", @min(write_timers[addr_text]),
+                   @avg(write_timers[addr_text]),
+                   @max(write_timers[addr_text]))
+
+            print(@hist_log(write_timers[addr_text]))
+        }
+
+        exit()
+    }
+}
+
+
+probe begin {
+    printf("Tracing %d ($^exec_path)\n\n", target())
+}

@@ -1,0 +1,7 @@
+// module nginx.string
+
+function ngx_str(s)
+{
+    $*s := @cast(s, "ngx_str_t", "$^exec_path")
+    return user_string_n($*s->data, $*s->len)
+}

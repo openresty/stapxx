@@ -261,6 +261,8 @@ Calculates the CPU context switching rate (number/second) in any specified user 
     [1379631383] 13408 cs/sec
     [1379631384] 14682 cs/sec
 
+Both switch-in and switch-out are counted in this tool.
+
 High context switching rate usually means higher overhead in the system. Ideally
 we could keep the context switching rate low.
 

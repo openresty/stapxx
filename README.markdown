@@ -52,6 +52,12 @@ This variable can evaluate to the value of a specified command-line argument. Fo
 
     stap++ --arg limit=1000
 
+You can dump out all the available arguments in the stap++ script by specifying the --args option, for example:
+
+    $ stap++ --args foo.sxx
+    --arg method=VALUE (default: )
+    --arg time=VALUE (default: 60)
+
 ### Default values
 
 It's possible to specify a default value for a macro variable by means of the `default` trait, as in

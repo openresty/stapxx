@@ -10,6 +10,7 @@ use FindBin ();
 
 GetOptions("D=s%",          \(my $D_opts),
            "arg=s%",        \(my $args),
+           "args",          \(my $print_args),
            "dump-src",      \(my $dump_src),
            "help",          \(my $help),
            "x=i",           \(my $pid),
@@ -25,6 +26,10 @@ push @$Inc, '.', "$FindBin::Bin/tapset";
 
 if ($^O ne 'linux') {
     die "Only linux is supported but I am on $^O.\n";
+}
+
+if ($print_args && $args && %$args) {
+    die "No --arg is allowed when --args is specified.\n";
 }
 
 my $ver = `stap --version 2>&1`;
@@ -121,14 +126,32 @@ if (defined $pid) {
     }
 }
 
-while (my ($k, $v) = each %$args) {
-    #warn "getting $k => $v";
-    $StdVars{"arg_$k"} = $v;
+if (!$print_args) {
+    while (my ($k, $v) = each %$args) {
+        #warn "getting $k => $v";
+        $StdVars{"arg_$k"} = $v;
+    }
 }
+
+my %used_args;
 
 my $stap_src = process_src($infile, $src);
 if ($dump_src) {
     print $stap_src;
+    exit;
+}
+
+if ($print_args) {
+    for my $name (sort keys %used_args) {
+        my $default = $used_args{$name};
+        print "\t--arg $name=VALUE";
+        if (defined $default) {
+            print " (default: $default)\n";
+
+        } else {
+            print "\n";
+        }
+    }
     exit;
 }
 
@@ -182,12 +205,22 @@ sub eval_std_var {
     if (defined $trait_name) {
         #warn "trait: $trait_name";
         if ($trait_name eq 'default') {
+            if ($print_args && $var =~ /^arg_(\w+)$/) {
+                $used_args{$1} = $trait_val;
+            }
             $StdVars{$var} = $trait_val;
             return $trait_val;
 
         } else {
             die "$file: line $.: unknown trait name: $trait_name\n";
         }
+    }
+
+    if ($print_args) {
+        if ($var =~ /^arg_(\w+)$/) {
+            $used_args{$1} = undef;
+        }
+        return '';
     }
 
     if ($var eq 'exec_path') {
@@ -306,11 +339,13 @@ Usage:
 
 Options:
     --arg NM=VAL    Specify extra user arguments (for $^arg_NM).
+    --args          Print all available arguments for --arg.
     -e SCRIPT       Run given script.
-    -D NM=VAL       emit macro definition into generated C code.
+    -D NM=VAL       Emit macro definition into generated C code.
     --help          Print this help.
     -I PATH         Specify the stap++ tapset library search directory.
-    -x PID          sets target() to PID (also for $^exec_path and $^libxxx_path).
+    -v              Be verbose.
+    -x PID          Sets target() to PID (also for $^exec_path and $^libxxx_path).
 
 Examples:
     stap++ -x 12345 -e 'probe begin { println("hello") exit() }'

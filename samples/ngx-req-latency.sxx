@@ -2,10 +2,29 @@
 
 global begin_times
 global latencies
+global method_id
 
 probe @pfunc(ngx_http_handler) {
     if (pid() == target() && $r == $r->main) {
-        begin_times[$r] = gettimeofday_us()
+        if ("$^arg_method :default()" != "") {
+            if (method_id == 0) {
+                if ($r->method_name->len > 0) {
+                    method = user_string_n($r->method_name->data, $r->method_name->len)
+                    //printf("found method %s\n", method)
+                    if (method == "$^arg_method") {
+                        method_id = $r->method
+                        //printf("found method id %d\n", method_id)
+                    }
+                }
+            }
+
+            if (method_id && method_id == $r->method) {
+                begin_times[$r] = gettimeofday_us()
+            }
+
+        } else {
+            begin_times[$r] = gettimeofday_us()
+        }
     }
 }
 
@@ -21,11 +40,21 @@ probe @pfunc(ngx_http_log_request) {
 
 probe begin {
     warn(sprintf("Start tracing process %d ($^exec_path)...", target()))
+    if ("$^arg_method" != "") {
+        warn("(Tracing only $^arg_method request methods)")
+    }
 }
 
 probe end {
-    printf("Distribution of the main request latencies (in microseconds)\n")
-    printf("(min/avg/max: %d/%d/%d\n", @min(latencies), @avg(latencies),
-           @max(latencies))
-    print(@hist_log(latencies))
+    count = @count(latencies)
+    if (count == 0) {
+        printf("\nNo samples found so far.\n")
+
+    } else {
+        printf("\nDistribution of the main request latencies (in microseconds) for %d samples:\n",
+               count)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(latencies), @avg(latencies),
+               @max(latencies))
+        print(@hist_log(latencies))
+    }
 }

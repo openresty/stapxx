@@ -14,6 +14,7 @@ GetOptions("D=s%",          \(my $D_opts),
            "help",          \(my $help),
            "x=i",           \(my $pid),
            "e=s",           \(my $src),
+           "v",             \(my $verbose),
            "skip-badvars",  \(my $skip_badvars),
            "I=s@",          \(my $Inc))
    or die usage();
@@ -77,6 +78,10 @@ if (!defined $src) {
 my (%StdVars, %UsedLibs, %DSOs, %LibPaths, %UsedStdVars);
 
 my @stap_opts;
+
+if ($verbose) {
+    push @stap_opts, "-v";
+}
 
 if (defined $skip_badvars) {
     push @stap_opts, "--skip-badvars";

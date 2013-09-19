@@ -1,0 +1,19 @@
+#!/usr/bin/env stap++
+
+global count
+
+probe scheduler.ctxswitch {
+    my_pid = target()
+    if (prev_pid == my_pid || next_pid == my_pid) {
+        count++
+    }
+}
+
+probe timer.s(1) {
+    printf("[%d] %d cs/sec\n", gettimeofday_s(), count)
+    count = 0
+}
+
+probe begin {
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
+}

@@ -173,6 +173,97 @@ The numbers in the leading square brackets are the current timestamp (seconds si
 
 Behind the scene, the Nginx main requests' completion events are traced.
 
+ngx-req-latency
+---------------
+
+Calculates the distribution of the Nginx request latencies (excluding the request header reading time) in any specified
+Nginx worker process at real time:
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    $ ./samples/ngx-req-latency.sxx -x 28078
+    WARNING: Start tracing process 28078 (/path/to/some/program)...
+    ^C
+    Distribution of the main request latencies (in microseconds)
+    (min/avg/max: 92/242181/42808832)
+        value |-------------------------------------------------- count
+           16 |                                                      0
+           32 |                                                      0
+           64 |                                                      8
+          128 |                                                      1
+          256 |                                                      3
+          512 |@@@@@                                               274
+         1024 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  2474
+         2048 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     1547
+         4096 |@@@@@@@@@@@@@@@@@@@                                 952
+         8192 |@@@@@@@@@@                                          500
+        16384 |@@@@@@@                                             359
+        32768 |@@@@@@@@                                            414
+        65536 |@@@@@@@@@@@@                                        644
+       131072 |@@@@@@@@@@@@@@@@@                                   851
+       262144 |@@@@@@@@@@@@                                        614
+       524288 |@@@@@@                                              334
+      1048576 |@@                                                  147
+      2097152 |                                                     46
+      4194304 |                                                     24
+      8388608 |@                                                    64
+     16777216 |                                                      1
+     33554432 |                                                      1
+     67108864 |                                                      0
+    134217728 |                                                      0
+
+One can also filter out requests by a specified request method name via the `--arg method=METHOD` option. For instance,
+
+    $ ./samples/ngx-req-latency.sxx -x 5447 --arg method=POST --arg time=60
+    Start tracing process 5447 (/usr/local/nginx-waf/sbin/nginx-waf)...
+    Please wait for 60 seconds...
+    (Tracing only POST request methods)
+
+    Distribution of the main request latencies (in microseconds) for 52 samples:
+    (min/avg/max: 1167/8373/28281)
+    value |-------------------------------------------------- count
+      256 |                                                    0
+      512 |                                                    0
+     1024 |@@                                                  2
+     2048 |@@@@@@@@                                            8
+     4096 |@@@@@@@@@@@@@@@@@@@@@@@                            23
+     8192 |@@@@@@@@@@@@@@                                     14
+    16384 |@@@@@                                               5
+    32768 |                                                    0
+    65536 |                                                    0
+
+We can also see from the example above that we can limit the sampling period by specifying the `--arg time=SECONDS` option.
+
+ctx-switches
+------------
+
+Calculates the CPU context switching rate (number/second) in any specified user process at real time:
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming the target process pid is 6254:
+    $ ./samples/ctx-switches.sxx -x 6254
+    WARNING: Tracing process 6254 (/path/to/some/process).
+    Hit Ctrl-C to end.
+    [1379631372] 13741 cs/sec
+    [1379631373] 13330 cs/sec
+    [1379631374] 14263 cs/sec
+    [1379631375] 14424 cs/sec
+    [1379631376] 14591 cs/sec
+    [1379631377] 11108 cs/sec
+    [1379631378] 12620 cs/sec
+    [1379631379] 12519 cs/sec
+    [1379631380] 13479 cs/sec
+    [1379631381] 14614 cs/sec
+    [1379631382] 14721 cs/sec
+    [1379631383] 13408 cs/sec
+    [1379631384] 14682 cs/sec
+
+High context switching rate usually means higher overhead in the system. Ideally
+we could keep the context switching rate low.
+
 Author
 ======
 

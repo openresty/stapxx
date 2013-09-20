@@ -45,3 +45,19 @@ function socket_sport(socket)
     sk = $*socket->sk
     return __tcp_sock_sport(sk)
 }
+
+
+function sock_is_client(sock)
+{
+    inet = sock
+    $*inet := @cast(inet, "struct inet_sock", "kernel")
+    return $*inet->sk->__sk_common->skc_rcv_saddr == $*inet->inet_saddr
+}
+
+
+function socket_is_client(socket)
+{
+    $*socket := @cast(socket, "struct socket", "kernel")
+    return sock_is_client($*socket->sk)
+
+}

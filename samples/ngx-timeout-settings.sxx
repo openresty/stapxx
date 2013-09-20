@@ -15,11 +15,11 @@ global processed_send_timeouts
 
 function get_addr_text(sk)
 {
-    if (sock_is_client(sk)) {
-        return sprintf("dst %d", __tcp_sock_dport(sk))
+    if (sock_is_server(sk)) {
+        return sprintf("src %d", __tcp_sock_sport(sk))
     }
 
-    return sprintf("src %d", __tcp_sock_sport(sk))
+    return sprintf("dst %d", __tcp_sock_dport(sk))
 }
 
 probe tcp.recvmsg.return

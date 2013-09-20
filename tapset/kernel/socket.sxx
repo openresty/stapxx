@@ -47,17 +47,18 @@ function socket_sport(socket)
 }
 
 
-function sock_is_client(sock)
+function sock_is_server(sock)
 {
     inet = sock
     $*inet := @cast(inet, "struct inet_sock", "kernel")
     return $*inet->sk->__sk_common->skc_rcv_saddr == $*inet->inet_saddr
+           && $*inet->inet_num == $*inet->inet_sport
 }
 
 
-function socket_is_client(socket)
+function socket_is_server(socket)
 {
     $*socket := @cast(socket, "struct socket", "kernel")
-    return sock_is_client($*socket->sk)
+    return sock_is_server($*socket->sk)
 
 }

@@ -1,0 +1,162 @@
+#!/usr/bin/env stap++
+
+global waiting_timer
+global timer_type  // 0: read, 1: send, 2: connect
+global read_timeouts, send_timeouts, connect_timeouts;
+global addr_text
+global processed_read_timeouts
+global processed_send_timeouts
+
+@define READ_EV %( 0 %)
+@define SEND_EV %( 1 %)
+@define CONNECT_EV %( 2 %)
+
+@use kernel.socket
+
+function get_addr_text(sk)
+{
+    if (sock_is_client(sk)) {
+        return sprintf("dst %d", __tcp_sock_dport(sk))
+    }
+
+    return sprintf("src %d", __tcp_sock_sport(sk))
+}
+
+probe tcp.recvmsg.return
+{
+    if (pid() == target()) {
+        //printf("recvmsg return: %d\n", $return)
+        //print_ubacktrace()
+        if ($return == -11) {
+            //println("recvmsg EAGAIN")
+            waiting_timer = 1
+            timer_type = @READ_EV
+            addr_text = get_addr_text($sk)
+
+        } else {
+            waiting_timer = 0
+        }
+    }
+}
+
+probe tcp.sendmsg.return
+{
+    if (pid() == target()) {
+        //printf("sendmsg return: %d\n", $return)
+        if ($return == -11) {
+            //println("sendmsg EAGAIN")
+            waiting_timer = 1
+            timer_type = @SEND_EV
+            addr_text = get_addr_text($sk)
+
+        } else {
+            waiting_timer = 0
+        }
+    }
+}
+
+probe kernel.function("inet_stream_connect").return
+{
+    if (pid() == target()) {
+        //printf("sendmsg return: %d\n", $return)
+        if ($return == -115) {
+            //println("connect EINPROGRESS")
+            waiting_timer = 1
+            timer_type = @CONNECT_EV
+            addr_text = get_addr_text($sock->sk)
+
+        } else {
+            waiting_timer = 0
+        }
+    }
+}
+
+probe @pfunc(ngx_event_add_timer)
+{
+    if (@defined($timer) && pid() == target() && waiting_timer) {
+        if (timer_type == @SEND_EV && $ev->write) {
+            send_timeouts[addr_text] <<< $timer
+
+        } else if (timer_type == @CONNECT_EV && $ev->write) {
+            connect_timeouts[addr_text] <<< $timer
+
+        } else if (timer_type == @READ_EV && !$ev->write) {
+            read_timeouts[addr_text] <<< $timer
+
+        } else {
+            waiting_timer = 0
+        }
+    }
+}
+
+@define output_reading %(
+    cnt = @count(read_timeouts[addr_text])
+    printf("%d samples for reading timers.\n", cnt)
+    printf("(min/avg/max: %d/%d/%d)\n", @min(read_timeouts[addr_text]),
+           @avg(read_timeouts[addr_text]),
+           @max(read_timeouts[addr_text]))
+    print(@hist_log(read_timeouts[addr_text]))
+%)
+
+@define output_sending %(
+    cnt = @count(send_timeouts[addr_text])
+    printf("%d samples for sending timers.\n", cnt)
+    printf("(min/avg/max: %d/%d/%d)\n", @min(send_timeouts[addr_text]),
+           @avg(send_timeouts[addr_text]),
+           @max(send_timeouts[addr_text]))
+    print(@hist_log(send_timeouts[addr_text]))
+%)
+
+probe end {
+    printf("\n")
+    foreach (addr_text in connect_timeouts- limit $^arg_limit :default(10)) {
+        printf("Port %s\n", addr_text)
+        printf("================\n")
+        cnt = @count(connect_timeouts[addr_text])
+        printf("%d samples for connecting timers.\n", cnt)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(connect_timeouts[addr_text]),
+               @avg(connect_timeouts[addr_text]),
+               @max(connect_timeouts[addr_text]))
+        print(@hist_log(connect_timeouts[addr_text]))
+
+        if (@count(read_timeouts[addr_text])) {
+            @output_reading
+            processed_read_timeouts[addr_text] = 1
+        }
+
+        if (@count(send_timeouts[addr_text])) {
+            @output_sending
+            processed_send_timeouts[addr_text] = 1
+        }
+    }
+
+    foreach (addr_text in read_timeouts- limit $^arg_limit) {
+        if (processed_read_timeouts[addr_text]) {
+            continue
+        }
+
+        printf("Port %s\n", addr_text)
+        printf("================\n")
+        @output_reading
+
+        if (!processed_send_timeouts[addr_text] && @count(send_timeouts[addr_text])) {
+            @output_sending
+            processed_send_timeouts[addr_text] = 1
+        }
+    }
+
+    foreach (addr_text in send_timeouts- limit $^arg_limit) {
+        if (processed_send_timeouts[addr_text]) {
+            continue
+        }
+
+        printf("Port %s\n", addr_text)
+        printf("================\n")
+        @output_sending
+    }
+}
+
+probe begin
+{
+    warn(sprintf("Tracing process %d ($^exec_path)\n", target()))
+}

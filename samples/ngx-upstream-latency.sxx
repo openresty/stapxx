@@ -1,0 +1,80 @@
+#!/usr/bin/env stap++
+
+@define EAGAIN %(11 %)
+
+global latency, waiting_resp
+
+function match_port(sk)
+{
+    return __tcp_sock_dport(sk) == $^arg_port
+}
+
+probe tcp.sendmsg.return
+{
+    if (pid() == target()) {
+        sk = $sk
+        if (match_port(sk)) {
+            //printf("sendmsg return: %d\n", $return)
+            waiting_resp[sk] = gettimeofday_us()
+        }
+    }
+}
+
+probe tcp.recvmsg.return
+{
+    if (pid() == target()) {
+        sk = $sk
+        if (match_port(sk)) {
+            //printf("recvmsg return: %d\n", $return)
+            //print_ubacktrace()
+            begin = waiting_resp[sk]
+            if (begin) {
+                if ($return != -@EAGAIN) {
+                    latency <<< gettimeofday_us() - begin
+                }
+                waiting_resp[sk] = 0
+            }
+        }
+    }
+}
+
+probe tcp.disconnect
+{
+    if (pid() == target()) {
+        sk = $sk
+        if (match_port(sk) && waiting_resp[sk]) {
+            delete waiting_resp[sk]
+        }
+    }
+}
+
+probe end {
+    printf("\n")
+    cnt = @count(latency)
+    if (cnt == 0) {
+        println("No samples found so far.\n")
+
+    } else {
+        printf("Distribution of the TCP query latency (in microseconds) for %d samples.\n",
+               cnt)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(latency),
+               @avg(latency), @max(latency))
+        print(@hist_log(latency))
+    }
+}
+
+probe begin
+{
+    printf("Tracing process %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

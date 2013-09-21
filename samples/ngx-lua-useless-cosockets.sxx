@@ -1,0 +1,44 @@
+#!/usr/bin/env stap++
+
+global acquired, unused
+
+probe @pfunc(ngx_http_lua_get_keepalive_peer) {
+    if (pid() == target()) {
+        acquired[$u] = 1
+    }
+}
+
+probe @pfunc(ngx_http_lua_socket_tcp_read),
+      @pfunc(ngx_http_lua_socket_send)
+{
+    if (pid() == target() && acquired[$u]) {
+        delete acquired[$u]
+    }
+}
+
+probe @pfunc(ngx_http_lua_socket_tcp_finalize)
+{
+    if (pid() == target() && acquired[$u]) {
+        unused++
+    }
+}
+
+probe end {
+    printf("\nFound %d unused ngx_lua TCP cosockets.\n", unused)
+}
+
+probe begin
+{
+    printf("Tracing process %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

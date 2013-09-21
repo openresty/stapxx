@@ -70,18 +70,19 @@ probe kernel.function("inet_stream_connect").return
 
 probe @pfunc(ngx_event_add_timer)
 {
-    if (@defined($timer) && pid() == target() && waiting_timer) {
-        if (timer_type == @SEND_EV && $ev->write) {
-            send_timeouts[$timer] <<< 1
+    if (pid() == target() && waiting_timer) {
+        waiting_timer = 0
+        if (@defined($timer)) {
+            if (timer_type == @SEND_EV && $ev->write) {
+                send_timeouts[$timer] <<< 1
 
-        } else if (timer_type == @CONNECT_EV && $ev->write) {
-            connect_timeouts[$timer] <<< 1
+            } else if (timer_type == @CONNECT_EV && $ev->write) {
+                connect_timeouts[$timer] <<< 1
 
-        } else if (timer_type == @READ_EV && !$ev->write) {
-            read_timeouts[$timer] <<< 1
+            } else if (timer_type == @READ_EV && !$ev->write) {
+                read_timeouts[$timer] <<< 1
 
-        } else {
-            waiting_timer = 0
+            }
         }
     }
 }

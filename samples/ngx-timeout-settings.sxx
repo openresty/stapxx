@@ -3,23 +3,23 @@
 global waiting_timer
 global timer_type  // 0: read, 1: send, 2: connect
 global read_timeouts, send_timeouts, connect_timeouts;
-global addr_text
-global processed_read_timeouts
-global processed_send_timeouts
 
 @define READ_EV %( 0 %)
 @define SEND_EV %( 1 %)
 @define CONNECT_EV %( 2 %)
 
+@define EAGAIN %(11 %)
+@define EINPROGRESS %(115 %)
+
 @use kernel.socket
 
-function get_addr_text(sk)
+function match_port(sk)
 {
-    if (sock_is_server(sk)) {
-        return sprintf("src %d", __tcp_sock_sport(sk))
-    }
-
-    return sprintf("dst %d", __tcp_sock_dport(sk))
+    %( $^arg_dport :default(0) != 0  %?
+    return __tcp_sock_dport(sk) == $^arg_dport
+    %:
+    return __tcp_sock_sport(sk) == $^arg_sport :default(0)
+    %)
 }
 
 probe tcp.recvmsg.return
@@ -27,11 +27,10 @@ probe tcp.recvmsg.return
     if (pid() == target()) {
         //printf("recvmsg return: %d\n", $return)
         //print_ubacktrace()
-        if ($return == -11) {
+        if ($return == -@EAGAIN && match_port($sk)) {
             //println("recvmsg EAGAIN")
             waiting_timer = 1
             timer_type = @READ_EV
-            addr_text = get_addr_text($sk)
 
         } else {
             waiting_timer = 0
@@ -43,11 +42,10 @@ probe tcp.sendmsg.return
 {
     if (pid() == target()) {
         //printf("sendmsg return: %d\n", $return)
-        if ($return == -11) {
+        if ($return == -@EAGAIN && match_port($sk)) {
             //println("sendmsg EAGAIN")
             waiting_timer = 1
             timer_type = @SEND_EV
-            addr_text = get_addr_text($sk)
 
         } else {
             waiting_timer = 0
@@ -58,12 +56,11 @@ probe tcp.sendmsg.return
 probe kernel.function("inet_stream_connect").return
 {
     if (pid() == target()) {
-        //printf("sendmsg return: %d\n", $return)
-        if ($return == -115) {
+        //printf("connect return: %d\n", $return)
+        if ($return == -@EINPROGRESS && match_port($sock->sk)) {
             //println("connect EINPROGRESS")
             waiting_timer = 1
             timer_type = @CONNECT_EV
-            addr_text = get_addr_text($sock->sk)
 
         } else {
             waiting_timer = 0
@@ -75,13 +72,13 @@ probe @pfunc(ngx_event_add_timer)
 {
     if (@defined($timer) && pid() == target() && waiting_timer) {
         if (timer_type == @SEND_EV && $ev->write) {
-            send_timeouts[addr_text] <<< $timer
+            send_timeouts <<< $timer
 
         } else if (timer_type == @CONNECT_EV && $ev->write) {
-            connect_timeouts[addr_text] <<< $timer
+            connect_timeouts <<< $timer
 
         } else if (timer_type == @READ_EV && !$ev->write) {
-            read_timeouts[addr_text] <<< $timer
+            read_timeouts <<< $timer
 
         } else {
             waiting_timer = 0
@@ -89,74 +86,40 @@ probe @pfunc(ngx_event_add_timer)
     }
 }
 
-@define output_reading %(
-    cnt = @count(read_timeouts[addr_text])
-    printf("%d samples for reading timers.\n", cnt)
-    printf("(min/avg/max: %d/%d/%d)\n", @min(read_timeouts[addr_text]),
-           @avg(read_timeouts[addr_text]),
-           @max(read_timeouts[addr_text]))
-    print(@hist_log(read_timeouts[addr_text]))
-%)
-
-@define output_sending %(
-    cnt = @count(send_timeouts[addr_text])
-    printf("%d samples for sending timers.\n", cnt)
-    printf("(min/avg/max: %d/%d/%d)\n", @min(send_timeouts[addr_text]),
-           @avg(send_timeouts[addr_text]),
-           @max(send_timeouts[addr_text]))
-    print(@hist_log(send_timeouts[addr_text]))
-%)
-
 probe end {
     printf("\n")
-    foreach (addr_text in connect_timeouts- limit $^arg_limit :default(10)) {
-        printf("Port %s\n", addr_text)
-        printf("================\n")
-        cnt = @count(connect_timeouts[addr_text])
-        printf("%d samples for connecting timers.\n", cnt)
-        printf("(min/avg/max: %d/%d/%d)\n", @min(connect_timeouts[addr_text]),
-               @avg(connect_timeouts[addr_text]),
-               @max(connect_timeouts[addr_text]))
-        print(@hist_log(connect_timeouts[addr_text]))
-
-        if (@count(read_timeouts[addr_text])) {
-            @output_reading
-            processed_read_timeouts[addr_text] = 1
-        }
-
-        if (@count(send_timeouts[addr_text])) {
-            @output_sending
-            processed_send_timeouts[addr_text] = 1
-        }
+    cnt = @count(connect_timeouts)
+    printf("%d samples for connecting timers.\n", cnt)
+    if (cnt) {
+        printf("(min/avg/max: %d/%d/%d)\n", @min(connect_timeouts),
+               @avg(connect_timeouts),
+               @max(connect_timeouts))
+        print(@hist_log(connect_timeouts))
     }
 
-    foreach (addr_text in read_timeouts- limit $^arg_limit) {
-        if (processed_read_timeouts[addr_text]) {
-            continue
-        }
-
-        printf("Port %s\n", addr_text)
-        printf("================\n")
-        @output_reading
-
-        if (!processed_send_timeouts[addr_text] && @count(send_timeouts[addr_text])) {
-            @output_sending
-            processed_send_timeouts[addr_text] = 1
-        }
+    cnt = @count(read_timeouts)
+    printf("%d samples for reading timers.\n", cnt)
+    if (cnt) {
+        printf("(min/avg/max: %d/%d/%d)\n", @min(read_timeouts),
+               @avg(read_timeouts),
+               @max(read_timeouts))
+        print(@hist_log(read_timeouts))
     }
 
-    foreach (addr_text in send_timeouts- limit $^arg_limit) {
-        if (processed_send_timeouts[addr_text]) {
-            continue
-        }
-
-        printf("Port %s\n", addr_text)
-        printf("================\n")
-        @output_sending
+    cnt = @count(send_timeouts)
+    printf("%d samples for sending timers.\n", cnt)
+    if (cnt) {
+        printf("(min/avg/max: %d/%d/%d)\n", @min(send_timeouts),
+               @avg(send_timeouts),
+               @max(send_timeouts))
+        print(@hist_log(send_timeouts))
     }
 }
 
 probe begin
 {
+    %( $^arg_dport == 0 && $^arg_sport == 0 %?
+        error("Neither --arg dport=PORT nor --arg sport=PORT is specified.")
+    %)
     warn(sprintf("Tracing process %d ($^exec_path)\n", target()))
 }

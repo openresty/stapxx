@@ -11,6 +11,8 @@ global read_timeouts, send_timeouts, connect_timeouts
 @define EAGAIN %(11 %)
 @define EINPROGRESS %(115 %)
 
+@define MSG_PEEK %( 2 %)
+
 @use kernel.socket
 
 function match_port(sk)
@@ -27,7 +29,7 @@ probe tcp.recvmsg.return
     if (pid() == target()) {
         //printf("recvmsg return: %d\n", $return)
         //print_ubacktrace()
-        if ($return == -@EAGAIN && match_port($sk)) {
+        if ($return == -@EAGAIN && !($flags & @MSG_PEEK) && match_port($sk)) {
             //println("recvmsg EAGAIN")
             waiting_timer = 1
             timer_type = @READ_EV

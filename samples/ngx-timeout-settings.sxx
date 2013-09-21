@@ -2,7 +2,7 @@
 
 global waiting_timer
 global timer_type  // 0: read, 1: send, 2: connect
-global read_timeouts, send_timeouts, connect_timeouts;
+global read_timeouts, send_timeouts, connect_timeouts
 
 @define READ_EV %( 0 %)
 @define SEND_EV %( 1 %)
@@ -72,13 +72,13 @@ probe @pfunc(ngx_event_add_timer)
 {
     if (@defined($timer) && pid() == target() && waiting_timer) {
         if (timer_type == @SEND_EV && $ev->write) {
-            send_timeouts <<< $timer
+            send_timeouts[$timer] <<< 1
 
         } else if (timer_type == @CONNECT_EV && $ev->write) {
-            connect_timeouts <<< $timer
+            connect_timeouts[$timer] <<< 1
 
         } else if (timer_type == @READ_EV && !$ev->write) {
-            read_timeouts <<< $timer
+            read_timeouts[$timer] <<< 1
 
         } else {
             waiting_timer = 0
@@ -88,31 +88,17 @@ probe @pfunc(ngx_event_add_timer)
 
 probe end {
     printf("\n")
-    cnt = @count(connect_timeouts)
-    printf("%d samples for connecting timers.\n", cnt)
-    if (cnt) {
-        printf("(min/avg/max: %d/%d/%d)\n", @min(connect_timeouts),
-               @avg(connect_timeouts),
-               @max(connect_timeouts))
-        print(@hist_log(connect_timeouts))
+
+    foreach (timer in connect_timeouts- limit $^arg_limit :default(10)) {
+        printf("Connecting timeout %dms: %d samples\n", timer, @count(connect_timeouts[timer]))
     }
 
-    cnt = @count(read_timeouts)
-    printf("%d samples for reading timers.\n", cnt)
-    if (cnt) {
-        printf("(min/avg/max: %d/%d/%d)\n", @min(read_timeouts),
-               @avg(read_timeouts),
-               @max(read_timeouts))
-        print(@hist_log(read_timeouts))
+    foreach (timer in send_timeouts- limit $^arg_limit) {
+        printf("Sending timeout %dms: %d samples\n", timer, @count(send_timeouts[timer]))
     }
 
-    cnt = @count(send_timeouts)
-    printf("%d samples for sending timers.\n", cnt)
-    if (cnt) {
-        printf("(min/avg/max: %d/%d/%d)\n", @min(send_timeouts),
-               @avg(send_timeouts),
-               @max(send_timeouts))
-        print(@hist_log(send_timeouts))
+    foreach (timer in read_timeouts- limit $^arg_limit) {
+        printf("Reading timeout %dms: %d samples\n", timer, @count(read_timeouts[timer]))
     }
 }
 

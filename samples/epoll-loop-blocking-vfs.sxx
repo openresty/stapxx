@@ -12,7 +12,7 @@ global epoll_begin
 global vfs_begin
 global vfs_latency
 
-probe syscall.rename, syscall.open, syscall.sendfile*,
+probe syscall.rename, syscall.open, syscall.close, syscall.sendfile*,
       vfs.read, vfs.write
 {
     if (target() == pid()) {
@@ -20,7 +20,7 @@ probe syscall.rename, syscall.open, syscall.sendfile*,
     }
 }
 
-probe syscall.rename.return, syscall.open.return, syscall.sendfile*.return,
+probe syscall.rename.return, syscall.open.return, syscall.close.return, syscall.sendfile*.return,
       vfs.read.return, vfs.write.return
 {
     if (target() == pid()) {

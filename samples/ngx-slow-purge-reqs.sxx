@@ -1,0 +1,60 @@
+#!/usr/bin/env stap++
+
+@use nginx.request
+global begins
+global send_header, send_req, process_header
+global in_ctx
+
+probe @pfunc(ngx_http_handler) {
+    if ($r == $r->main && $r->method_name->len == 5) {
+        m = ngx_req_method($r)
+        if (m == "PURGE") {
+            begins[$r] = gettimeofday_ms()
+        }
+    }
+}
+
+probe @pfunc(ngx_http_upstream_process_header) {
+    if (begins[$r]) {
+        process_header[$r] = gettimeofday_ms()
+        in_ctx = 1
+    }
+}
+
+probe @pfunc(ngx_http_log_request) {
+    b = begins[$r]
+    if (b) {
+        delete begins[$r]
+
+        snd_hd = send_header[$r]
+        delete send_header[$r]
+
+        prc_hd = process_header[$r]
+        delete process_header[$r]
+
+        req = send_req[$r]
+        delete send_req[$r]
+
+        printf("%s %s (total: %dms, upstream send req: %dms, upsream process header: %dms, send response header: %dms)\n",
+               ngx_req_method($r), ngx_req_uri($r), gettimeofday_ms() - b,
+               req ? req - b : -1,
+               prc_hd ? prc_hd - b : -1,
+               snd_hd ? snd_hd - b : -1)
+    }
+}
+
+probe @pfunc(ngx_http_upstream_send_request) {
+    if (begins[$r]) {
+        send_req[$r] = gettimeofday_ms()
+    }
+}
+
+probe @pfunc(ngx_http_header_filter) {
+    if (begins[$r]) {
+        send_header[$r] = gettimeofday_ms()
+    }
+}
+
+probe begin {
+    printf("Tracing %d ($^exec_path)\n", target())
+}

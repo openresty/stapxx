@@ -1,0 +1,13 @@
+// module nginx.request
+
+function ngx_req_method(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    return user_string_n($*r->method_name->data, $*r->method_name->len)
+}
+
+function ngx_req_uri(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    return user_string_n($*r->uri->data, $*r->uri->len)
+}

@@ -1,0 +1,36 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+global old, G, freed
+
+probe process("$^liblua_path").function("lj_gc_step")
+{
+    if (G == 0) {
+        L = ngx_lua_get_main_lua_vm()
+        //printf("L = %p\n", L)
+        G = luajit_G(L)
+    }
+
+    $*G := @cast(G, "global_State", "$^libluajit_path")
+    old = $*G->gc->total
+}
+
+probe process("$^liblua_path").function("lj_gc_step").return
+{
+    if (old && G) {
+        freed += old - $*G->gc->total
+    }
+}
+
+probe timer.s(1) {
+    if (target() == pid()) {
+        printf("LuaJIT GC freed: %d bytes/sec\n", freed)
+        freed = 0
+    }
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\nHit Ctrl-C to end.\n", target())
+}

@@ -1,0 +1,13 @@
+// module nginx.config
+
+
+function ngx_cycle_get_module_main_conf(cycle, module_index)
+{
+    $*cycle := @cast(cycle, "ngx_cycle_t", "$^exec_path")
+    ctx = $*cycle->conf_ctx[@var("ngx_http_module", "$^exec_path")->index]
+    if (ctx == 0) {
+        return 0
+    }
+    $*ctx := @cast(ctx, "ngx_http_conf_ctx_t", "$^exec_path")
+    return $*ctx->main_conf[module_index]
+}

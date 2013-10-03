@@ -1,0 +1,7 @@
+// module luajit
+
+function luajit_G(L)
+{
+    $*L := @cast(L, "lua_State", "$^libluajit_path")
+    return $*L->glref->ptr32
+}

@@ -266,6 +266,21 @@ Both switch-in and switch-out are counted in this tool.
 High context switching rate usually means higher overhead in the system. Ideally
 we could keep the context switching rate low.
 
+ngx-lj-gc
+---------
+
+This tool analyses the LuaJIT 2.0 GC in the specified Nginx worker process via the [ngx_lua](http://wiki.nginx.org/HttpLuaModule) mdoule.
+
+For now, it just prints out the total memory currently allocated in the LuaJIT GC. For example,
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming the nginx worker process's pid is 4771:
+    $ ./samples/ngx-lj-gc.sxx -x 4771
+    Start tracing 4771 (/opt/nginx/sbin/nginx)
+    Total GC count: 258618 bytes
+
 Author
 ======
 

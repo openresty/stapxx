@@ -1,0 +1,22 @@
+// module nginx.config
+
+
+@use nginx.config
+
+
+function ngx_lua_cycle_get_main_conf()
+{
+    return ngx_cycle_get_module_main_conf(@var("ngx_cycle", "$^exec_path"),
+                                       @var("ngx_http_lua_module", "$^exec_path")->ctx_index)
+}
+
+
+function ngx_lua_get_main_lua_vm()
+{
+    lmcf = ngx_lua_cycle_get_main_conf()
+    if (lmcf) {
+        $*lmcf := @cast(lmcf, "ngx_http_lua_main_conf_t", "$^exec_path")
+        return $*lmcf->lua
+    }
+    return 0
+}

@@ -287,6 +287,8 @@ ngx-lj-gc-objs
 This tool dumps the GC objects' memory usage stats in any specified running Nginx worker process
 according to the GC object's types.
 
+This tool reveals exactly how the memory is distributed among all Lua value types, which is useful for optimizing Lua code's memory usage and debugging memory leak issues in the Lua programs.
+
 Here is an example.
 
     # making the ./stap++ tool visible in PATH:

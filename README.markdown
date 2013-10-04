@@ -281,6 +281,51 @@ For now, it just prints out the total memory currently allocated in the LuaJIT G
     Start tracing 4771 (/opt/nginx/sbin/nginx)
     Total GC count: 258618 bytes
 
+ngx-lj-gc-objs
+--------------
+
+This tool dumps the GC objects' memory usage stats in any specified running Nginx worker process
+according to the GC object's types.
+
+Here is an example.
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    $ ngx-lj-gc-objs.sxx -x 5681
+    Start tracing 5681 (/opt/nginx/sbin/nginx)
+    GC total size: 1222413 bytes
+    strmask: 1084243984, strnum: 3700, strings: 3700
+    GC state: 1
+    8643 table objects: max=6176, avg=92, min=32, sum=800280
+    3700 string objects: max=2965, avg=48, min=18, sum=179566
+    691 function objects: max=144, avg=29, min=20, sum=20536
+    461 userdata objects: max=8895, avg=83, min=24, sum=38497
+    309 proto objects: max=34571, avg=543, min=78, sum=167854
+    292 upvalue objects: max=24, avg=24, min=24, sum=7008
+    98 trace objects: max=0, avg=0, min=0, sum=0
+    11 thread objects: max=1648, avg=1549, min=568, sum=17048
+    8 cdata objects: max=0, avg=0, min=0, sum=0
+    The GC walker detected for total 1268717 bytes.
+
+For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
+
+    $ ngx-lj-gc-objs.sxx -x 13045 -D MAXACTION=400000
+    Start tracing 13045 (/opt/nginx/sbin/nginx)
+    GC total size: 19138185 bytes
+    strmask: 1119305744, strnum: 64387, strings: 64387
+    GC state: 0
+    77789 table objects: max=524328, avg=103, min=32, sum=8042016
+    64387 string objects: max=1421562, avg=117, min=18, sum=7585255
+    25931 userdata objects: max=8916, avg=50, min=27, sum=1320458
+    5078 function objects: max=148, avg=27, min=20, sum=137992
+    1695 upvalue objects: max=24, avg=24, min=24, sum=40680
+    727 thread objects: max=1648, avg=756, min=424, sum=549944
+    652 proto objects: max=3860, avg=313, min=74, sum=204104
+    209 trace objects: max=0, avg=0, min=0, sum=0
+    9 cdata objects: max=0, avg=0, min=0, sum=0
+    The GC walker detected for total 18409897 bytes.
+
 Author
 ======
 

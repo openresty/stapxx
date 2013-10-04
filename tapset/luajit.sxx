@@ -1,7 +1,123 @@
 // module luajit
 
+
+@define TSTR    %( 4 %)
+@define TUPVAL  %( 5 %)
+@define TTHREAD %( 6 %)
+@define TPROTO  %( 7 %)
+@define TFUNC   %( 8 %)
+@define TTRACE  %( 9 %)
+@define TCDATA  %( 10 %)
+@define TTAB    %( 11 %)
+@define TUDATA  %( 12 %)
+
+@define FF_LUA %( 0 %)
+@define FF_C   %( 1 %)
+
+@define sizeof_GCtab  %( &@cast(0, "GCtab", "$^libluajit_path")[1] %)
+@define sizeof_TValue  %( &@cast(0, "TValue", "$^libluajit_path")[1] %)
+@define sizeof_lua_State %( &@cast(0, "struct lua_State", "$^libluajit_path")[1] %)
+@define sizeof_GCfunc %( &@cast(0, "union GCfunc", "$^libluajit_path")[1] %)
+@define sizeof_GCupval %( &@cast(0, "GCupval", "$^libluajit_path")[1] %)
+@define sizeof_GCstr %( &@cast(0, "GCstr", "$^libluajit_path")[1] %)
+@define sizeof_GCudata %( &@cast(0, "GCudata", "$^libluajit_path")[1] %)
+@define sizeof_Node %( &@cast(0, "Node", "$^libluajit_path")[1] %)
+@define sizeof_GCfuncC %( &@cast(0, "GCfuncC", "$^libluajit_path")[1] %)
+@define sizeof_GCfuncL %( &@cast(0, "GCfuncL", "$^libluajit_path")[1] %)
+@define sizeof_GCRef %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
+@define sizetabcolo(n) %( (n) * @sizeof_TValue + @sizeof_GCtab %)
+
+
 function luajit_G(L)
 {
     $*L := @cast(L, "lua_State", "$^libluajit_path")
     return $*L->glref->ptr32
+}
+
+
+function luajit_gcref(r)
+{
+    $*r := @cast(r, "GCRef", "$^libluajit_path")
+    return $*r->gcptr32
+}
+
+
+function luajit_isluafunc(fn)
+{
+    $*fn := @cast(fn, "GCfunc", "$^libluajit_path")
+    //printf("ffid: %d\n", $*fn->c->ffid)
+    return $*fn->c->ffid == @FF_LUA
+}
+
+
+function luajit_objlen(o, gct)
+{
+    $*o := @cast(o, "GCobj", "$^libluajit_path")
+    if (gct == @TSTR) {
+        /*
+        if ($*o->str->len == 0) {
+            printf("empty string found.\n")
+        }
+        */
+        return $*o->str->len + 1 + @sizeof_GCstr
+    }
+
+    if (gct == @TTAB) {
+        t = &$*o->tab
+        $*t := @cast(t, "GCtab", "$^libluajit_path")
+        asize = $*t->asize
+        hmask = $*t->hmask
+
+        n = 0
+        if (hmask > 0) {
+            n += @sizeof_Node * (hmask + 1)
+        }
+
+        if (asize > 0 && $*t->colo <= 0) {
+            n += @sizeof_TValue * asize
+        }
+
+        if ($*t->colo) {
+            n += @sizetabcolo($*t->colo & 0x7f)
+
+        } else {
+            n += @sizeof_GCtab
+        }
+
+        return n
+    }
+
+    if (gct == @TUDATA) {
+        return $*o->ud->len + @sizeof_GCudata
+    }
+
+    if (gct == @TPROTO) {
+        return $*o->pt->sizept
+    }
+
+    if (gct == @TTHREAD) {
+        L = &$*o->th
+        //printf("open upval: %p\n", luajit_gcref(&$*L->openupval))
+        //printf("lua_State: %d\n", @sizeof_lua_State)
+        return @sizeof_lua_State + $*L->stacksize * @sizeof_TValue
+    }
+
+    if (gct == @TFUNC) {
+        fn = &$*o->fn
+        if (luajit_isluafunc(fn)) {
+            n = $*fn->l->nupvalues
+            //n = 0
+            return @sizeof_GCfuncL - @sizeof_GCRef + @sizeof_GCRef * n
+        }
+
+        n = $*fn->c->nupvalues
+        //n = 0
+        return @sizeof_GCfuncC - @sizeof_TValue + @sizeof_TValue * n
+    }
+
+    if (gct == @TUPVAL) {
+        return @sizeof_GCupval
+    }
+
+    return 0
 }

@@ -32,7 +32,7 @@ if ($print_args && $args && %$args) {
     die "No --arg is allowed when --args is specified.\n";
 }
 
-my $ver = `stap --version 2>&1`;
+my $ver = `stap -V 2>&1`;
 if (!defined $ver) {
     die "Systemtap not installed or its \"stap\" utility is not visible to the PATH environment: $!\n";
 }

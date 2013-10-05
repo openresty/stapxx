@@ -31,7 +31,6 @@
 @define sizeof_SnapShot %( &@cast(0, "SnapShot", "$^libluajit_path")[1] %)
 @define sizeof_SnapEntry %( &@cast(0, "SnapEntry", "$^libluajit_path")[1] %)
 @define sizeof_K64Array %( &@cast(0, "K64Array", "$^libluajit_path")[1] %)
-@define sizetabcolo(n) %( (n) * @sizeof_TValue + @sizeof_GCtab %)
 
 
 function luajit_G(L)
@@ -84,7 +83,7 @@ function luajit_objlen(o, gct)
         }
 
         if ($*t->colo) {
-            n += @sizetabcolo($*t->colo & 0x7f)
+            n += ($*t->colo & 0x7f) * @sizeof_TValue + @sizeof_GCtab
 
         } else {
             n += @sizeof_GCtab

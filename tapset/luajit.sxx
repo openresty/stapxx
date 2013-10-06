@@ -11,6 +11,11 @@
 @define TTAB    %( 11 %)
 @define TUDATA  %( 12 %)
 
+@define CTSHIFT_NUM  %( 28 %)
+@define CT_HASSIZE   %( 5 %)
+@define CT_ATTRIB    %( 8 %)
+@define CTMASK_CID   %( 0xffff %)
+
 @define FF_LUA %( 0 %)
 @define FF_C   %( 1 %)
 
@@ -26,11 +31,14 @@
 @define sizeof_GCfuncL %( &@cast(0, "GCfuncL", "$^libluajit_path")[1] %)
 @define sizeof_GCRef %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
 @define sizeof_GCtrace %( &@cast(0, "GCtrace", "$^libluajit_path")[1] %)
+@define sizeof_GCcdata %( &@cast(0, "GCcdata", "$^libluajit_path")[1] %)
 @define sizeof_IRIns %( &@cast(0, "IRIns", "$^libluajit_path")[1] %)
 @define sizeof_IRRef %( &@cast(0, "IRRef", "$^libluajit_path")[1] %)
 @define sizeof_SnapShot %( &@cast(0, "SnapShot", "$^libluajit_path")[1] %)
 @define sizeof_SnapEntry %( &@cast(0, "SnapEntry", "$^libluajit_path")[1] %)
 @define sizeof_K64Array %( &@cast(0, "K64Array", "$^libluajit_path")[1] %)
+@define sizeof_ptr %( &@cast(0, "global_State", "$^libluajit_path")->strmask %)
+@define sizeof_GCcdataVar %( &@cast(0, "GCcdataVar", "$^libluajit_path")[1] %)
 
 
 function luajit_G(L)
@@ -55,7 +63,7 @@ function luajit_isluafunc(fn)
 }
 
 
-function luajit_objlen(o, gct)
+function luajit_objlen(o, gct, g)
 {
     $*o := @cast(o, "GCobj", "$^libluajit_path")
     if (gct == @TSTR) {
@@ -114,7 +122,7 @@ function luajit_objlen(o, gct)
 
             $*o := @cast(o, "GCobj", "$^libluajit_path")
             gct = $*o->gch->gct
-            size = luajit_objlen(o, gct)
+            size = luajit_objlen(o, gct, g)
             //printf("%s: %d\n", typenames[@TSTR], size)
             n += size
             p = &$*o->gch->nextgc
@@ -147,6 +155,40 @@ function luajit_objlen(o, gct)
                + ($*T->nins - $*T->nk) * @sizeof_IRIns
                + $*T->nsnap * @sizeof_SnapShot
                + $*T->nsnapmap * @sizeof_SnapEntry
+    }
+
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    if (gct == @TCDATA) {
+        cd = o
+        $*cd := @cast(cd, "GCcdata", "$^libluajit_path")
+        if ($*cd->marked & 0x80) {
+            /* cdata is a vector */
+            cdatav = cd - @sizeof_GCcdataVar
+            $*cdatav := @cast(cdatav, "GCcdataVar", "$^libluajit_path")
+            return $*cdatav->len + $*cdatav->extra
+        }
+
+        /* cdata is not a vector */
+        cts = $*g->ctype_state->ptr32
+        $*cts := @cast(cts, "CTState", "$^libluajit_path")
+        id = $*cd->ctypeid
+        ct = &$*cts->tab[id]
+        $*ct := @cast(ct, "CType", "$^libluajit_path")
+        while (($*ct->info >> @CTSHIFT_NUM) == @CT_ATTRIB) {
+            //printf("XXX skipping c type attribute\n")
+            ct = &$*cts->tab[$*ct->info & @CTMASK_CID]
+        }
+
+        if (($*ct->info >> @CTSHIFT_NUM) <= @CT_HASSIZE) {
+            sz = $*ct->size
+
+        } else {
+            sz = @sizeof_ptr
+        }
+
+        //printf("GCcdata size: %d\n", @sizeof_GCcdata)
+        return @sizeof_GCcdata + sz
     }
 
     return 0

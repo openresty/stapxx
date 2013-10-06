@@ -323,29 +323,29 @@ Here is an example.
 
 For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
 
-    $ ngx-lj-gc-objs.sxx -x 14378 MAXACTION=100000
-    Start tracing 14378 (/opt/nginx/sbin/nginx)
+    $ ngx-lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
+    Start tracing 14378 (/usr/local/nginx-fl/sbin/nginx-fl)
 
     main machine code area size: 65536 bytes
     C callback machine code size: 4096 bytes
-    GC total size: 7444899 bytes
+    GC total size: 9683407 bytes
     GC state: pause
 
-    20214 table objects: max=65576, avg=102, min=32, sum=2075664 (in bytes)
-    17683 string objects: max=1421562, avg=228, min=18, sum=4035192 (in bytes)
-    4522 userdata objects: max=8916, avg=84, min=27, sum=380459 (in bytes)
-    2053 function objects: max=148, avg=28, min=20, sum=59272 (in bytes)
-    916 upvalue objects: max=24, avg=24, min=24, sum=21984 (in bytes)
+    27948 table objects: max=131112, avg=106, min=32, sum=2983944 (in bytes)
+    22343 string objects: max=1421562, avg=198, min=18, sum=4432482 (in bytes)
+    12168 userdata objects: max=8916, avg=50, min=27, sum=619223 (in bytes)
+    2837 function objects: max=148, avg=27, min=20, sum=78264 (in bytes)
+    1200 upvalue objects: max=24, avg=24, min=24, sum=28800 (in bytes)
     650 proto objects: max=3860, avg=313, min=74, sum=203902 (in bytes)
-    197 trace objects: max=1560, avg=376, min=160, sum=74164 (in bytes)
-    121 thread objects: max=1648, avg=745, min=424, sum=90224 (in bytes)
+    349 thread objects: max=1648, avg=774, min=424, sum=270464 (in bytes)
+    202 trace objects: max=1560, avg=375, min=160, sum=75832 (in bytes)
     9 cdata objects: max=36, avg=17, min=12, sum=156 (in bytes)
     JIT state size: 7696 bytes
-    global state tmpbuf size: 355386 bytes
+    global state tmpbuf size: 710772 bytes
     C type state size: 4568 bytes
 
-    My GC walker detected for total 7444899 bytes.
-    28755 microseconds elapsed in the probe handler.
+    My GC walker detected for total 9683407 bytes.
+    45008 microseconds elapsed in the probe handler.
 
 Author
 ======

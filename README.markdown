@@ -296,39 +296,56 @@ Here is an example.
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-    $ ngx-lj-gc-objs.sxx -x 5681
-    Start tracing 5681 (/opt/nginx/sbin/nginx)
-    GC total size: 1222413 bytes
-    strmask: 1084243984, strnum: 3700, strings: 3700
-    GC state: 1
-    8643 table objects: max=6176, avg=92, min=32, sum=800280
-    3700 string objects: max=2965, avg=48, min=18, sum=179566
-    691 function objects: max=144, avg=29, min=20, sum=20536
-    461 userdata objects: max=8895, avg=83, min=24, sum=38497
-    309 proto objects: max=34571, avg=543, min=78, sum=167854
-    292 upvalue objects: max=24, avg=24, min=24, sum=7008
-    98 trace objects: max=0, avg=0, min=0, sum=0
-    11 thread objects: max=1648, avg=1549, min=568, sum=17048
-    8 cdata objects: max=0, avg=0, min=0, sum=0
-    The GC walker detected for total 1268717 bytes.
+    # assuming the nginx worker pid is 5686:
+    $ ngx-lj-gc-objs.sxx -x 5686
+    Start tracing 5686 (/opt/nginx/sbin/nginx)
+
+    main machine code area size: 65536 bytes
+    C callback machine code size: 4096 bytes
+    GC total size: 922648 bytes
+    GC state: sweep
+
+    4713 table objects: max=6176, avg=90, min=32, sum=428600 (in bytes)
+    3341 string objects: max=2965, avg=47, min=18, sum=159305 (in bytes)
+    677 function objects: max=144, avg=29, min=20, sum=20224 (in bytes)
+    563 userdata objects: max=8895, avg=82, min=24, sum=46698 (in bytes)
+    306 proto objects: max=34571, avg=541, min=78, sum=165557 (in bytes)
+    287 upvalue objects: max=24, avg=24, min=24, sum=6888 (in bytes)
+    102 trace objects: max=928, avg=337, min=160, sum=34468 (in bytes)
+    8 cdata objects: max=24, avg=17, min=16, sum=136 (in bytes)
+    7 thread objects: max=1648, avg=1493, min=568, sum=10456 (in bytes)
+    JIT state size: 6920 bytes
+    global state tmpbuf size: 2948 bytes
+    C type state size: 2520 bytes
+
+    My GC walker detected for total 922648 bytes.
+    5782 microseconds elapsed in the probe handler.
 
 For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
 
-    $ ngx-lj-gc-objs.sxx -x 13045 -D MAXACTION=400000
-    Start tracing 13045 (/opt/nginx/sbin/nginx)
-    GC total size: 19138185 bytes
-    strmask: 1119305744, strnum: 64387, strings: 64387
-    GC state: 0
-    77789 table objects: max=524328, avg=103, min=32, sum=8042016
-    64387 string objects: max=1421562, avg=117, min=18, sum=7585255
-    25931 userdata objects: max=8916, avg=50, min=27, sum=1320458
-    5078 function objects: max=148, avg=27, min=20, sum=137992
-    1695 upvalue objects: max=24, avg=24, min=24, sum=40680
-    727 thread objects: max=1648, avg=756, min=424, sum=549944
-    652 proto objects: max=3860, avg=313, min=74, sum=204104
-    209 trace objects: max=0, avg=0, min=0, sum=0
-    9 cdata objects: max=0, avg=0, min=0, sum=0
-    The GC walker detected for total 18409897 bytes.
+    $ ngx-lj-gc-objs.sxx -x 14378 MAXACTION=100000
+    Start tracing 14378 (/opt/nginx/sbin/nginx)
+
+    main machine code area size: 65536 bytes
+    C callback machine code size: 4096 bytes
+    GC total size: 7444899 bytes
+    GC state: pause
+
+    20214 table objects: max=65576, avg=102, min=32, sum=2075664 (in bytes)
+    17683 string objects: max=1421562, avg=228, min=18, sum=4035192 (in bytes)
+    4522 userdata objects: max=8916, avg=84, min=27, sum=380459 (in bytes)
+    2053 function objects: max=148, avg=28, min=20, sum=59272 (in bytes)
+    916 upvalue objects: max=24, avg=24, min=24, sum=21984 (in bytes)
+    650 proto objects: max=3860, avg=313, min=74, sum=203902 (in bytes)
+    197 trace objects: max=1560, avg=376, min=160, sum=74164 (in bytes)
+    121 thread objects: max=1648, avg=745, min=424, sum=90224 (in bytes)
+    9 cdata objects: max=36, avg=17, min=12, sum=156 (in bytes)
+    JIT state size: 7696 bytes
+    global state tmpbuf size: 355386 bytes
+    C type state size: 4568 bytes
+
+    My GC walker detected for total 7444899 bytes.
+    28755 microseconds elapsed in the probe handler.
 
 Author
 ======

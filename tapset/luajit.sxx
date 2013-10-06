@@ -206,7 +206,7 @@ function luajit_jit_state_size(J)
         k = $*k->next->ptr32
     }
     if (ir_k64_size) {
-        printf("64-bit constants: %d\n", ir_k64_size)
+        //printf("64-bit constants: %d\n", ir_k64_size)
     }
 
     sizesnapmap = $*J->sizesnapmap * @sizeof_SnapEntry

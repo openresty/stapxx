@@ -37,6 +37,8 @@ global gcobjs
 //probe @pfunc(process)
 probe @pfunc(ngx_process_events_and_timers)
 {
+    begin = gettimeofday_us()
+
     //L = @var("L")
     L = ngx_lua_get_main_lua_vm()
 
@@ -158,6 +160,10 @@ probe @pfunc(ngx_process_events_and_timers)
     }
 
     printf("\nMy GC walker detected for total %d bytes.\n", total)
+
+    printf("%d microseconds elapsed in the probe handler.\n",
+           gettimeofday_us() - begin)
+
     exit()
 }
 

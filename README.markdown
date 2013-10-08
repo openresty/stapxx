@@ -424,6 +424,34 @@ complete collection cycle immediately. See
 http://www.lua.org/manual/5.1/manual.html#pdf-collectgarbage for more
 details. But this is usually very expensive to call and it is strongly discouraged for production use.
 
+epoll-et-lt
+-----------
+
+This tool can checks how many epoll_ctl syscalls use the epoll edge-trigger (ET) mode and how many use the epoll level-trigger (LT) model. The statistics is gathered and printed out every 1 second. This tool is not specific to Nginx.
+
+Here is an example:
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    $ ./samples/epoll-et-lt.sxx -x 5728
+    Tracing epoll_ctl in user process 5728 (/opt/nginx/sbin/nginx)...
+    Hit Ctrl-C to end.
+    51 ET, 0 LT.
+    384 ET, 0 LT.
+    388 ET, 0 LT.
+    390 ET, 0 LT.
+    389 ET, 0 LT.
+    394 ET, 0 LT.
+    394 ET, 0 LT.
+    396 ET, 0 LT.
+    395 ET, 0 LT.
+    384 ET, 0 LT.
+    394 ET, 0 LT.
+    396 ET, 0 LT.
+    397 ET, 0 LT.
+    ^C
+
 Author
 ======
 

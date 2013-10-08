@@ -1,0 +1,28 @@
+#!/usr/bin/env stap++
+
+@define EPOLL_CTL_ADD  %( 1 %)
+@define EPOLLET        %( 0x80000000 %)
+
+global ets, lts
+
+probe syscall.epoll_ctl {
+    if (pid() == target() && $op == @EPOLL_CTL_ADD) {
+        if ($event->events & @EPOLLET) {
+            ets++
+
+        } else {
+            lts++
+        }
+    }
+}
+
+probe timer.s(1) {
+    printf("%d ET, %d LT.\n", ets, lts)
+    ets = 0
+    lts = 0
+}
+
+probe begin {
+    printf("Tracing epoll_ctl in user process %d ($^exec_path)...\n", target())
+    printf("Hit Ctrl-C to end.\n")
+}

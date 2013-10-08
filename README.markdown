@@ -452,6 +452,31 @@ Here is an example:
     397 ET, 0 LT.
     ^C
 
+We can see that Nginx is using epoll ET exclusively :)
+
+Below is another example for KyotoTycoon servers:
+
+    $ epoll-et-lt.sxx -x 4011
+    Tracing epoll_ctl in user process 4011 (/usr/local/bin/ktserver)...
+    Hit Ctrl-C to end.
+    0 ET, 0 LT.
+    0 ET, 3 LT.
+    0 ET, 0 LT.
+    0 ET, 2 LT.
+    0 ET, 0 LT.
+    0 ET, 0 LT.
+    0 ET, 4 LT.
+    0 ET, 3 LT.
+    0 ET, 0 LT.
+    0 ET, 5 LT.
+    0 ET, 1 LT.
+    0 ET, 1 LT.
+    0 ET, 1 LT.
+    0 ET, 0 LT.
+    ^C
+
+We can see that the `ktserver` process is using epoll LT all the time :)
+
 Author
 ======
 

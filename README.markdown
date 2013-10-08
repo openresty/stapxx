@@ -370,7 +370,7 @@ The following types of objects participate in GC and thus considered
 * userdata: Lua user data
 * trace: JIT compiled Lua code paths
 
-Note that the space calculated for aggregate objects like "table" and
+Note that for the space calculated for aggregate objects like "table" and
 "function", only the size of their backbones is calculated. For
 example, for a Lua table, we do not follow the references to its value
 objects and key objects (but we do include the size of the "key" and

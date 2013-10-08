@@ -347,6 +347,83 @@ For LuaJIT instances with big memory usage, you need to increase the `MAXACTION`
     My GC walker detected for total 9683407 bytes.
     45008 microseconds elapsed in the probe handler.
 
+The "objects" are Lua values that actually participate in garbage
+collection (GC).
+
+Primitive Lua values like numbers, booleans, nils, and light user data
+do not participate in GC, so we shall never see them listed in the
+output of the ngx-lj-gc-objs tool.
+
+Another interesting exception is empty Lua strings, they are specially
+handled by LuaJIT and they never appear in the output either.
+
+The following types of objects participate in GC and thus considered
+"GC objects" in LuaJIT 2.0:
+
+* string: Lua strings
+* upvalue: Lua Upvalues
+* thread: Lua threads (i.e., Lua coroutines)
+* proto: Lua function prototypes
+* function: Lua functions (Lua closures) and C functions
+* cdata: cdata created by the FFI API in Lua.
+* table: Lua tables
+* userdata: Lua user data
+* trace: JIT compiled Lua code paths
+
+Note that the space calculated for aggregate objects like "table" and
+"function", only the size of their backbones is calculated. For
+example, for a Lua table, we do not follow the references to its value
+objects and key objects (but we do include the size of the "key" and
+"value" reference pointers themselves). Similarly, for a Lua function
+object, we do not follow its upvalues either. Therefore, we can safely
+add up the sizes of all the GC objects to obtain the total size
+allocated by the LuaJIT GC without repeating anyone.
+
+It's worth mentioning that the LuaJIT GC may also allocate some space
+for some components in the VM itself (on demand):
+
+* the JIT compiler state (i.e., the "JIT state size" item in the tool's output).
+* the state for FFI C types (i.e., the "C type state size" item in the output).
+* global state temporary buffer (i.e., the "global state tmpbuf size" item).
+
+These allocations may not happen for trivial examples. For example, if
+the JIT compiler is disabled, we won't see nonzero "JIT state size".
+Similarly, if we don't use FFI in our Lua code at all, we won't see
+nonzero "C type state size" either.
+
+Like any language with a proper GC, any unused Lua objects will be
+automatically freed by the LuaJIT GC. You make a Lua object become
+unused by avoid referencing the object from any "GC root objects"
+either directly or indirectly.
+
+It is usually fine for Lua objects to stay a little longer then needed.Basically it's fine and also
+normal to see the GC count (or the memory allocated by the GC) going
+up and down during the lifetime of the process.
+
+That is how a typical incremental GC works. The LuaJIT GC cycle
+consists of various different phases. And all these phases are divided
+into many small pieces that interleave with normal Lua code execution.
+For example, when the GC cycle is at the "sweep-string" phase,
+non-string GC objects will not freed at all until the GC cycle later
+enters the "sweep" phase.
+
+This tool is good at finding out the largest GC objects
+in your already bloated Nginx worker processes. It is not really designed for debugging
+individual requests due to the non-determinism of the GC on micro
+levels. You should load your nginx workers by tools like ab and
+weighttp or just trace workers in production, so as to make your nginx worker eat up a _lot_ of memory. The
+more, the merrier. After that, run ngx-lj-gc-objs on your largest
+nginx worker process.
+
+To debug individual requests, you *can* force the LuaJIT GC to free all the unsed objects at once by calling
+
+    collectgarbage()
+
+This forces the LuaJIT (or standard Lua interpreter) GC to run a
+complete collection cycle immediately. See
+http://www.lua.org/manual/5.1/manual.html#pdf-collectgarbage for more
+details. But this is usually very expensive to call and it is strongly discouraged for production use.
+
 Author
 ======
 

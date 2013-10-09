@@ -488,7 +488,7 @@ the process's epoll-based event loop (if there is one).
 
 Here is an example for analyzing a massively blocked Nginx worker processes in production (by really bad disk IO):
 
-   $ ./samples/epoll-loop-blocking-distr.sxx -x 19647 --arg time=60
+    $ ./samples/epoll-loop-blocking-distr.sxx -x 19647 --arg time=60
     Start tracing 19647...
     Please wait for 60 seconds.
     Distribution of epoll loop blocking latencies (in milliseconds)

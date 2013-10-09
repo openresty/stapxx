@@ -477,6 +477,47 @@ Below is another example for KyotoTycoon servers:
 
 We can see that the `ktserver` process is using epoll LT all the time :)
 
+epoll-loop-blocking-distr
+-------------------------
+
+This tool can sample any specified user process for the specified time (by default, 5 seconds) and print out the distribution
+of the latency between successive epoll_wait syscalls.
+
+Essentially, it can give you a picture about the blocking latency involved in
+the process's epoll-based event loop (if there is one).
+
+Here is an example for analyzing a massively blocked Nginx worker processes in production (by really bad disk IO):
+
+   $ ./samples/epoll-loop-blocking-distr.sxx -x 19647 --arg time=60
+    Start tracing 19647...
+    Please wait for 60 seconds.
+    Distribution of epoll loop blocking latencies (in milliseconds)
+    max/avg/min: 1097/0/0
+    value |-------------------------------------------------- count
+        0 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  18471
+        1 |@@@@@@@@                                            3273
+        2 |@                                                    473
+        4 |                                                     119
+        8 |                                                      67
+       16 |                                                      51
+       32 |                                                      35
+       64 |                                                      20
+      128 |                                                      23
+      256 |                                                       9
+      512 |                                                       2
+     1024 |                                                       2
+     2048 |                                                       0
+     4096 |                                                       0
+
+Note the long tail from 4ms ~ 1.1sec.
+
+To further analyse exactly what is blocking the epoll loop, you
+can use the off-CPU and on-CPU flame graph tools:
+
+https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt
+
+https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt-off-cpu
+
 Author
 ======
 

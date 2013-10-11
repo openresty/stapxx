@@ -18,5 +18,5 @@ probe timer.s(1) {
 }
 
 probe begin {
-    warn(sprintf("Tracing process %d.\nHit Ctrl-C to end.\n", target()))
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
 }

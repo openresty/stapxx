@@ -33,6 +33,6 @@ probe end {
 }
 
 probe begin {
-    printf("Start tracing %d...\nPlease wait for %d seconds.\n\n",
+    printf("Start tracing %d ($^exec_path)...\nPlease wait for %d seconds.\n\n",
            target(), $^arg_time)
 }

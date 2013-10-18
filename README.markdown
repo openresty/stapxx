@@ -528,7 +528,6 @@ Here is an example:
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-
     $./samples/sample-bt-leaks.sxx -x $pid --arg time=5 \
             -D STP_NO_OVERLOAD > a.bt
 

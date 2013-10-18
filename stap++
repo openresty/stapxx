@@ -8,7 +8,7 @@ use File::Spec ();
 use File::Temp qw( tempdir );
 use FindBin ();
 
-GetOptions("D=s%",          \(my $D_opts),
+GetOptions("D=s@",          \(my $D_opts),
            "arg=s%",        \(my $args),
            "args",          \(my $print_args),
            "dump-src",      \(my $dump_src),
@@ -53,20 +53,24 @@ if ($help) {
     exit;
 }
 
-if (!$D_opts) {
-    $D_opts = {};
+my %set_D_opts;
+for my $opt (@$D_opts) {
+    #warn "$opt\n";
+    if ($opt =~ /^(MAXACTION|MAXMAPENTRIES|MAXBACKTRACE)=/) {
+        $set_D_opts{$1} = 1;
+    }
 }
 
-if (!$D_opts->{MAXACTION}) {
-    $D_opts->{MAXACTION} = 100000;
+if (!$set_D_opts{MAXACTION}) {
+    push @$D_opts, "MAXACTION=100000";
 }
 
-if (!$D_opts->{MAXMAPENTRIES}) {
-    $D_opts->{MAXMAPENTRIES} = 5000;
+if (!$set_D_opts{MAXMAPENTRIES}) {
+    push @$D_opts, "MAXMAPENTRIES=5000";
 }
 
-if (!$D_opts->{MAXBACKTRACE}) {
-    $D_opts->{MAXBACKTRACE} = 200;
+if (!$set_D_opts{MAXBACKTRACE}) {
+    push @$D_opts, "MAXBACKTRACE=200";
 }
 
 my $infile;
@@ -92,8 +96,8 @@ if (defined $skip_badvars) {
     push @stap_opts, "--skip-badvars";
 }
 
-while (my ($k, $v) = each %$D_opts) {
-    push @stap_opts, "-D$k=$v";
+for my $opt (@$D_opts) {
+    push @stap_opts, "-D$opt";
 }
 
 if (defined $pid) {

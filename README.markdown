@@ -518,6 +518,37 @@ https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt
 
 https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt-off-cpu
 
+sample-bt-leaks
+---------------
+
+This tool can sample backtraces for memory allocations (based on libc's `malloc`) that have not been freed in the sampling time period.
+
+Here is an example:
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+
+    $./samples/sample-bt-leaks.sxx -x $pid --arg time=5 \
+            -D STP_NO_OVERLOAD > a.bt
+
+    $ stackcollapse-stap.pl a.bt > a.cbt
+    $ flamegraph.pl --countname=bytes \
+            --title="Memory Leak Flame Graph" a.cbt > a.svg
+
+Yu can now open the "Memory Leak Flame Graph" file, `a.svg`, in your favorite web browser.
+
+The tools `stackcollapse-stap.pl` and `flamegraph.pl` are from the FlameGraph repository by Brendan Gregg:
+
+https://github.com/brendangregg/FlameGraph
+
+Below is a sample "Memory Leak Flame Graph" for a real memory leak bug
+in older versions of the Nginx core:
+
+http://agentzh.org/misc/flamegraph/nginx-leaks-2013-10-08.svg
+
+For more details about this bug, see http://forum.nginx.org/read.php?2,241478,241478
+
 Author
 ======
 

@@ -548,11 +548,10 @@ http://agentzh.org/misc/flamegraph/nginx-leaks-2013-10-08.svg
 
 For more details about this bug, see http://forum.nginx.org/read.php?2,241478,241478
 
-This tool requires the `uretprobes` feature in the kernel.
+This tool requires the `uretprobes` feature in the kernel. If you are using an old kernel patched by the utrace patch, then you should be good. If you are using a mainline kernel, then you need at least 3.10.x.
 
-If you are using an old kernel patched by the utrace patch, then you should be good.
-
-If you are using a mainline kernel, then you need at least 3.10.x.
+This tool has relatively high overhead especially for processes without (clever) custom allocators (but still *way* faster than Valgrind memcheck). So be careful when
+using this tool in production. Only use this tool in production when you really have a leak.
 
 Author
 ======

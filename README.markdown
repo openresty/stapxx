@@ -521,7 +521,7 @@ https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt-off-cpu
 sample-bt-leaks
 ---------------
 
-This tool can sample backtraces for memory allocations based on glibc's buildtins (`malloc`, `calloc`, `realloc`) that have not been freed (via `free`) in the sampling time period.
+This tool can sample backtraces for memory allocations based on glibc's builtins (`malloc`, `calloc`, `realloc`) that have not been freed (via `free`) in the sampling time period.
 
 Here is an example:
 

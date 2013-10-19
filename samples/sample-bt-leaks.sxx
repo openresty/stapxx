@@ -13,9 +13,12 @@ probe begin
     warn("Wait for $^arg_time :default(10) sec to complete.\n")
 }
 
-probe process("/lib*/libc.so*").function("malloc").return
+probe process("$^libc_path").function("malloc").return,
+      process("$^libc_path").function("calloc").return,
+      process("$^libc_path").function("realloc").return
 {
     if (pid() == target()) {
+        //printf("Hit %s\n", probefunc())
         if (quit) {
             foreach (bt in bt_stats) {
                 print_ustack(bt)
@@ -25,20 +28,47 @@ probe process("/lib*/libc.so*").function("malloc").return
             exit()
 
         } else {
+            if (@defined($oldmem)) {
+                //printf("free %p in realloc\n", $oldmem)
+                ptr = $oldmem
 
-            //printf("malloc: %p (bytes %d)\n", $return, $bytes)
+                bt = ptr2bt[ptr]
+                delete ptr2bt[ptr]
+
+                bytes = ptr2size[ptr]
+                delete ptr2size[ptr]
+
+                bt_stats[bt] <<< -bytes
+                if (@sum(bt_stats[bt]) == 0) {
+                    delete bt_stats[bt]
+                }
+            }
+
             ptr = $return
-            bt = ubacktrace()
-            ptr2bt[ptr] = bt
-            ptr2size[ptr] = $bytes
-            bt_stats[bt] <<< $bytes
+            if (ptr) {
+                // here we use a hack specific to glibc's implementation
+                // to get the size of the memory block because we
+                // may not get the value of the $bytes parameter reliably.
+                $*sizeof_size_t := &@cast(0, "size_t")[1]
+                p = ptr - $*sizeof_size_t
+                size = @cast(p, "size_t")[0] & ~($*sizeof_size_t - 1)
+
+                //printf("alloc: %p (bytes %d)\n", $return, size)
+                bt = ubacktrace()
+                ptr2bt[ptr] = bt
+                ptr2size[ptr] = size
+                bt_stats[bt] <<< size
+
+            } else {
+                warn("NULL returned")
+            }
         }
     }
 }
 
-probe process("/lib*/libc.so*").function("free")
+probe process("$^libc_path").function("free")
 {
-    if (pid() == target()) {
+    if (pid() == target() && $mem) {
         //printf("free: %p\n", $mem)
         ptr = $mem
 

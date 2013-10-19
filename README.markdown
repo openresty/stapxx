@@ -521,7 +521,7 @@ https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt-off-cpu
 sample-bt-leaks
 ---------------
 
-This tool can sample backtraces for memory allocations (based on libc's `malloc`) that have not been freed in the sampling time period.
+This tool can sample backtraces for memory allocations based on glibc's buildtins (`malloc`, `calloc`, `realloc`) that have not been freed (via `free`) in the sampling time period.
 
 Here is an example:
 
@@ -552,6 +552,8 @@ This tool requires the `uretprobes` feature in the kernel. If you are using an o
 
 This tool has relatively high overhead especially for processes without (clever) custom allocators (but still *way* faster than Valgrind memcheck). So be careful when
 using this tool in production. Only use this tool in production when you really have a leak.
+
+Please note that the `realloc` function in some builds of glibc may not have correct argument values, so you *may* see false positives on code paths doing `realloc`.
 
 Author
 ======

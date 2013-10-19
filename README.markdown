@@ -555,6 +555,14 @@ using this tool in production. Only use this tool in production when you really 
 
 Please note that the `realloc` function in some builds of glibc may not have correct argument values, so you *may* see false positives on code paths doing `realloc`.
 
+You can find more details on Memory Leak Flame Graphs in Brendan Gregg's blog post:
+
+http://dtrace.org/blogs/brendan/2013/08/16/memory-leak-growth-flame-graphs/
+
+And general information about Flame Graphs here:
+
+http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/
+
 Author
 ======
 

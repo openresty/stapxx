@@ -529,7 +529,7 @@ Here is an example:
     $ export PATH=$PWD:$PATH
 
     $./samples/sample-bt-leaks.sxx -x $pid --arg time=5 \
-            -D STP_NO_OVERLOAD > a.bt
+            -D STP_NO_OVERLOAD -D MAXMAPENTRIES=10000 > a.bt
 
     $ stackcollapse-stap.pl a.bt > a.cbt
     $ flamegraph.pl --countname=bytes \

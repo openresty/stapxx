@@ -528,9 +528,13 @@ Here is an example:
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-    $./samples/sample-bt-leaks.sxx -x $pid --arg time=5 \
+    # assuming the target process has the pid 16795:
+    $./samples/sample-bt-leaks.sxx -x 16795 --arg time=5 \
             -D STP_NO_OVERLOAD -D MAXMAPENTRIES=10000 > a.bt
+    WARNING: Start tracing 16795 (/opt/nginx/sbin/nginx)...
+    WARNING: Wait for 5 sec to complete.
 
+    $ export PATH=/path/to/FlameGraph:$PATH
     $ stackcollapse-stap.pl a.bt > a.cbt
     $ flamegraph.pl --countname=bytes \
             --title="Memory Leak Flame Graph" a.cbt > a.svg
@@ -547,6 +551,8 @@ in older versions of the Nginx core:
 http://agentzh.org/misc/flamegraph/nginx-leaks-2013-10-08.svg
 
 For more details about this bug, see http://forum.nginx.org/read.php?2,241478,241478
+
+This tool is general and not specific to Nginx, for example.
 
 This tool requires the `uretprobes` feature in the kernel. If you are using an old kernel patched by the utrace patch, then you should be good. If you are using a mainline kernel, then you need at least 3.10.x.
 

@@ -1,6 +1,12 @@
 // module luajit
 
 
+//@define LJ_TLIGHTUD  %( 4294967292 %)
+@define LJ_TLIGHTUD  %( 4294901760 %)
+@define LJ_TSTR  %( 4294967291 %)
+@define LJ_TUDATA  %( 4294967283 %)
+
+
 @define TSTR    %( 4 %)
 @define TUPVAL  %( 5 %)
 @define TTHREAD %( 6 %)
@@ -230,4 +236,87 @@ function luajit_jit_state_size(J)
     }
 
     return ir_k64_size + sizesnapmap + sizesnap + sizeirbuf + sizetrace
+}
+
+
+/* returns a TValue* pointer */
+function luajit_index2adr(L, idx)
+{
+    if (idx > 0) {
+        o = $*L->base + (idx - 1) * @sizeof_TValue
+        return o < $*L->top ? o : 0
+    }
+
+    top = $*L->top
+
+    if (idx != 0 && -idx <= top - $*L->base) {
+        return top + idx * @sizeof_TValue;
+    }
+
+    return 0
+}
+
+
+function luajit_tostring(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return "<nil>"
+    }
+
+    if ($*o->it == @LJ_TSTR) {
+        gco = $*o->gcr->gcptr32
+        $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+        s = &$*gco->str
+        $*s := @cast(s, "GCstr", "$^libluajit_path")
+        return user_string_n(s + @sizeof_GCstr, $*s->len)
+    }
+
+    return "<unknown>"
+}
+
+
+function luajit_tostringlen(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return -1
+    }
+
+    if ($*o->it == @LJ_TSTR) {
+        gco = $*o->gcr->gcptr32
+        $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+        s = &$*gco->str
+        $*s := @cast(s, "GCstr", "$^libluajit_path")
+        return $*s->len
+    }
+
+    return -1
+}
+
+
+function luajit_touserdata(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return 0
+    }
+
+    //printf("udata type: %d (%d)\n", $*o->it, ($*o->it >> 15))
+
+    if ($*o->it == @LJ_TUDATA) {
+        gco = $*o->gcr->gcptr32
+        ud = &$*gco->ud
+        $*ud := @cast(ud, "GCudata", "$^libluajit_path")
+        return ud + @sizeof_GCudata
+    }
+
+    if ($*o->it == @LJ_TLIGHTUD) {
+        return $*o->u64 & 0x7fffffffffff
+    }
+
+    return 0
 }

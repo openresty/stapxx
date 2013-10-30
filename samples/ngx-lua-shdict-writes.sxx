@@ -55,7 +55,7 @@ function handler(L, flags)
         op = "safe_" . op
     }
 
-    printf("%s key=%s value_len=%d zone=%s\n", op, luajit_tostring(L, 2),
+    printf("%s key=%s value_len=%d dict=%s\n", op, luajit_tostring(L, 2),
            luajit_tostringlen(L, 3), dict)
 }
 

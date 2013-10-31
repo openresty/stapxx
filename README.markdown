@@ -663,15 +663,15 @@ Below is an example:
     [1383177226] add key=visitor::174.96.24.88 value_len=-1 dict=locks
     [1383177226] set key=visitor::174.96.24.88 value_len=18 dict=visitor_cache
     [1383177226] set key=visitor::174.96.24.88 value_len=-1 dict=locks
-    [1383177226] add key=vzone::go-mpulse.net:174.96.24.88 value_len=-1 dict=locks
-    [1383177226] set key=vzone::go-mpulse.net:174.96.24.88 value_len=11 dict=zone_cache
-    [1383177226] set key=vzone::go-mpulse.net:174.96.24.88 value_len=-1 dict=locks
-    [1383177226] set key=::BIC:174.96.24.88:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36:- value_len=4 dict=visitor_cache
-    [1383177226] add key=visitor::69.250.109.246 value_len=-1 dict=locks
-    [1383177226] set key=visitor::69.250.109.246 value_len=18 dict=visitor_cache
-    [1383177226] set key=visitor::69.250.109.246 value_len=-1 dict=locks
-    [1383177226] add key=vzone::healthywaytocook.com:69.250.109.246 value_len=-1 dict=locks
-    [1383177226] set key=vzone::healthywaytocook.com:69.250.109.246 value_len=11 dict=zone_cache
+    [1383177226] add key=vzone::mybaz.net:174.96.24.88 value_len=-1 dict=locks
+    [1383177226] set key=vzone::mybaz.net:174.96.24.88 value_len=11 dict=zone_cache
+    [1383177226] set key=vzone::mybaz.net:174.96.24.88 value_len=-1 dict=locks
+    [1383177226] set key=::BIC:127.0.0.2:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36:- value_len=4 dict=visitor_cache
+    [1383177226] add key=visitor::127.0.0.1 value_len=-1 dict=locks
+    [1383177226] set key=visitor::127.0.0.1 value_len=18 dict=visitor_cache
+    [1383177226] set key=visitor::127.0.0.1 value_len=-1 dict=locks
+    [1383177226] add key=vzone::foobar.com:127.0.0.1 value_len=-1 dict=locks
+    [1383177226] set key=vzone::foobar.com:127.0.0.1 value_len=11 dict=zone_cache
     ^C
 ```
 

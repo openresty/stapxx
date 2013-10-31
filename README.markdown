@@ -21,7 +21,7 @@ Table of Contents
         * [@pfunc(FUNCTION)](#pfuncfunction)
 * [Samples](#samples)
     * [ngx-rps](#ngx-rps)
-    * [ngx-req-latency](#ngx-req-latency)
+    * [ngx-req-latency-distr](#ngx-req-latency-distr)
     * [ctx-switches](#ctx-switches)
     * [ngx-lj-gc](#ngx-lj-gc)
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
@@ -233,8 +233,8 @@ Behind the scene, the Nginx main requests' completion events are traced.
 
 [Back to TOC](#table-of-contents)
 
-ngx-req-latency
----------------
+ngx-req-latency-distr
+---------------------
 
 Calculates the distribution of the Nginx request latencies (excluding the request header reading time) in any specified
 Nginx worker process at real time:
@@ -242,7 +242,7 @@ Nginx worker process at real time:
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-    $ ./samples/ngx-req-latency.sxx -x 28078
+    $ ./samples/ngx-req-latency-distr.sxx -x 28078
     WARNING: Start tracing process 28078 (/path/to/some/program)...
     ^C
     Distribution of the main request latencies (in microseconds)
@@ -275,7 +275,7 @@ Nginx worker process at real time:
 
 One can also filter out requests by a specified request method name via the `--arg method=METHOD` option. For instance,
 
-    $ ./samples/ngx-req-latency.sxx -x 5447 --arg method=POST --arg time=60
+    $ ./samples/ngx-req-latency-distr.sxx -x 5447 --arg method=POST --arg time=60
     Start tracing process 5447 (/usr/local/nginx-waf/sbin/nginx-waf)...
     Please wait for 60 seconds...
     (Tracing only POST request methods)

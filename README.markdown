@@ -569,6 +569,57 @@ And general information about Flame Graphs here:
 
 http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/
 
+ngx-lua-shdict-writes
+---------------------
+
+This tool can be used to trace write operations (`set`/`add`/`replace`/`safe_set`) to
+[ngx_lua](https://github.com/chaoslawful/lua-nginx-module)'s shared dictionary zones in any running Nginx worker process
+at real time.
+
+Below is an example:
+
+```bash
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming one nginx worker process has the pid 28723.
+    $ ngx-lua-shdict-writes.sxx -x 28723
+    WARNING: Tracing process 28723 (/opt/nginx/sbin/nginx).
+    Hit Ctrl-C to end.
+    [1383177226] add key=visitor::174.96.24.88 value_len=-1 dict=locks
+    [1383177226] set key=visitor::174.96.24.88 value_len=18 dict=visitor_cache
+    [1383177226] set key=visitor::174.96.24.88 value_len=-1 dict=locks
+    [1383177226] add key=vzone::go-mpulse.net:174.96.24.88 value_len=-1 dict=locks
+    [1383177226] set key=vzone::go-mpulse.net:174.96.24.88 value_len=11 dict=zone_cache
+    [1383177226] set key=vzone::go-mpulse.net:174.96.24.88 value_len=-1 dict=locks
+    [1383177226] set key=::BIC:174.96.24.88:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36:- value_len=4 dict=visitor_cache
+    [1383177226] add key=visitor::69.250.109.246 value_len=-1 dict=locks
+    [1383177226] set key=visitor::69.250.109.246 value_len=18 dict=visitor_cache
+    [1383177226] set key=visitor::69.250.109.246 value_len=-1 dict=locks
+    [1383177226] add key=vzone::healthywaytocook.com:69.250.109.246 value_len=-1 dict=locks
+    [1383177226] set key=vzone::healthywaytocook.com:69.250.109.246 value_len=11 dict=zone_cache
+    ^C
+```
+
+The `--arg dict=NAME` option can be used to filter writes to a particular shared dictionary zone:
+
+```bash
+    # assuming one nginx worker process has the pid 28723.
+    $ ngx-lua-shdict-writes.sxx -x 28723 --arg dict=cpage_cache
+    WARNING: Tracing process 28723 (/opt/nginx/sbin/nginx).
+    Hit Ctrl-C to end.
+    [1383177035] set key=cpage::/cpage/cf-error/1000s/838156:4891573 value_len=7 dict=cpage_cache
+    [1383177035] set key=cpage::/cpage/block/ip-ban/171116:748534 value_len=1407861 dict=cpage_cache
+    [1383177036] set key=cpage::/cpage/block/ip-ban/171116:748534 value_len=1407861 dict=cpage_cache
+    [1383177040] set key=cpage::/cpage/cf-error/1000s/281904:1355323 value_len=309229 dict=cpage_cache
+    [1383177042] set key=cpage::/cpage/cf-error/1000s/405903:2067154 value_len=7 dict=cpage_cache
+    [1383177043] set key=cpage::/cpage/block/iuam-basic/841468:4916374 value_len=7 dict=cpage_cache
+    [1383177043] set key=cpage::/cpage/block/ip-ban/171116:748534 value_len=1407861 dict=cpage_cache
+    [1383177046] set key=cpage::/cpage/block/ip-ban/171116:748534 value_len=1407861 dict=cpage_cache
+    [1383177047] set key=cpage::/cpage/block/basic-sec-captcha/291111:4428016 value_len=7 dict=cpage_cache
+    ^C
+```
+
 Author
 ======
 

@@ -3,6 +3,36 @@ NAME
 
 stap++ - Simple macro language extensions to systemtap
 
+Table of Contents
+=================
+
+* [NAME](#name)
+* [Synopsis](#synopsis)
+* [Description](#description)
+* [Features](#features)
+    * [Standard Macro Variables](#standard-macro-variables)
+        * [$^exec_path](#exec_path)
+        * [$^libNAME_path](#libname_path)
+        * [$^arg_NAME](#arg_name)
+        * [Default values](#default-values)
+    * [User-defined Macro Variables](#user-defined-macro-variables)
+    * [Tapset Modules](#tapset-modules)
+    * [Shorthands](#shorthands)
+        * [@pfunc(FUNCTION)](#pfuncfunction)
+* [Samples](#samples)
+    * [ngx-rps](#ngx-rps)
+    * [ngx-req-latency](#ngx-req-latency)
+    * [ctx-switches](#ctx-switches)
+    * [ngx-lj-gc](#ngx-lj-gc)
+    * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
+    * [epoll-et-lt](#epoll-et-lt)
+    * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
+    * [sample-bt-leaks](#sample-bt-leaks)
+    * [ngx-lua-shdict-writes](#ngx-lua-shdict-writes)
+* [Author](#author)
+* [Copyright and License](#copyright-and-license)
+* [See Also](#see-also)
+
 Synopsis
 ========
 
@@ -22,8 +52,12 @@ not affect the source line numbers so that the line numbers reported by `stap` a
 Features
 ========
 
+[Back to TOC](#table-of-contents)
+
 Standard Macro Variables
 ------------------------
+
+[Back to TOC](#table-of-contents)
 
 ### $^exec_path
 
@@ -35,6 +69,8 @@ Here is an example:
 ```stap
     probe process("$^exec_path").function("blah") { ... }
 ```
+
+[Back to TOC](#table-of-contents)
 
 ### $^libNAME_path
 
@@ -52,6 +88,8 @@ Below is an example for tracing a user-land function in the libpcre library:
     }
 ```
 
+[Back to TOC](#table-of-contents)
+
 ### $^arg_NAME
 
 This variable can evaluate to the value of a specified command-line argument. For example, `$^arg_limit` is evaluated to the value of the command line argument `limit` specified like this:
@@ -64,6 +102,8 @@ You can dump out all the available arguments in the stap++ script by specifying 
     --arg method=VALUE (default: )
     --arg time=VALUE (default: 60)
 
+[Back to TOC](#table-of-contents)
+
 ### Default values
 
 It's possible to specify a default value for a macro variable by means of the `default` trait, as in
@@ -73,6 +113,8 @@ It's possible to specify a default value for a macro variable by means of the `d
     }
 
 where `$^arg_limit` takes the default value 1000 when the user does not specify the `--arg limit=N` command-line option while invoking `stap++`.
+
+[Back to TOC](#table-of-contents)
 
 User-defined Macro Variables
 ----------------------------
@@ -89,6 +131,8 @@ It's possible to bind a `@cast()` or `@var()` expression to a user-defined macro
 Note that we used the `:=` operator to bind a `@cast()` or `@var()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` or `@var()` expression.
 
 The scope of user variables is always limited to the current `.sxx` source file.
+
+[Back to TOC](#table-of-contents)
 
 Tapset Modules
 --------------
@@ -128,8 +172,12 @@ or equivalently,
 
 All those macro variables are free to use in the tapset module files.
 
+[Back to TOC](#table-of-contents)
+
 Shorthands
 ----------
+
+[Back to TOC](#table-of-contents)
 
 ### @pfunc(FUNCTION)
 
@@ -151,8 +199,12 @@ is equivalent to
         ...
     }
 
+[Back to TOC](#table-of-contents)
+
 Samples
 =======
+
+[Back to TOC](#table-of-contents)
 
 ngx-rps
 -------
@@ -178,6 +230,8 @@ worker process specified by its pid:
 The numbers in the leading square brackets are the current timestamp (seconds since the Epoch).
 
 Behind the scene, the Nginx main requests' completion events are traced.
+
+[Back to TOC](#table-of-contents)
 
 ngx-req-latency
 ---------------
@@ -241,6 +295,8 @@ One can also filter out requests by a specified request method name via the `--a
 
 We can also see from the example above that we can limit the sampling period by specifying the `--arg time=SECONDS` option.
 
+[Back to TOC](#table-of-contents)
+
 ctx-switches
 ------------
 
@@ -272,6 +328,8 @@ Both switch-in and switch-out are counted in this tool.
 High context switching rate usually means higher overhead in the system. Ideally
 we could keep the context switching rate low.
 
+[Back to TOC](#table-of-contents)
+
 ngx-lj-gc
 ---------
 
@@ -286,6 +344,8 @@ For now, it just prints out the total memory currently allocated in the LuaJIT G
     $ ./samples/ngx-lj-gc.sxx -x 4771
     Start tracing 4771 (/opt/nginx/sbin/nginx)
     Total GC count: 258618 bytes
+
+[Back to TOC](#table-of-contents)
 
 ngx-lj-gc-objs
 --------------
@@ -430,6 +490,8 @@ complete collection cycle immediately. See
 http://www.lua.org/manual/5.1/manual.html#pdf-collectgarbage for more
 details. But this is usually very expensive to call and it is strongly discouraged for production use.
 
+[Back to TOC](#table-of-contents)
+
 epoll-et-lt
 -----------
 
@@ -483,6 +545,8 @@ Below is another example for KyotoTycoon servers:
 
 We can see that the `ktserver` process is using epoll LT all the time :)
 
+[Back to TOC](#table-of-contents)
+
 epoll-loop-blocking-distr
 -------------------------
 
@@ -523,6 +587,8 @@ can use the off-CPU and on-CPU flame graph tools:
 https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt
 
 https://github.com/agentzh/nginx-systemtap-toolkit#sample-bt-off-cpu
+
+[Back to TOC](#table-of-contents)
 
 sample-bt-leaks
 ---------------
@@ -575,6 +641,8 @@ And general information about Flame Graphs here:
 
 http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/
 
+[Back to TOC](#table-of-contents)
+
 ngx-lua-shdict-writes
 ---------------------
 
@@ -626,10 +694,14 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
     ^C
 ```
 
+[Back to TOC](#table-of-contents)
+
 Author
 ======
 
 Yichun Zhang (agentzh), <agentzh@gmail.com>, CloudFlare Inc.
+
+[Back to TOC](#table-of-contents)
 
 Copyright and License
 =====================
@@ -648,7 +720,11 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+[Back to TOC](#table-of-contents)
+
 See Also
 ========
 * SystemTap Wiki Home: http://sourceware.org/systemtap/wiki
 * Nginx Systemtap Toolkit: https://github.com/agentzh/nginx-systemtap-toolkit
+[Back to TOC](#table-of-contents)
+

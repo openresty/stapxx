@@ -13,6 +13,7 @@ global entered_rewrite_phase, rewrite_phase_time
 global entered_preaccess_phase, preaccess_phase_time
 global entered_access_phase, access_phase_time
 global entered_content_phase, content_phase_time
+global entered_log_phase
 
 global entered_upstream_connect, upstream_connect_time
 global entered_upstream_send, upstream_send_time
@@ -22,21 +23,21 @@ global seen_find_config
 
 @define eval_rewrite_phase_time %(
     if (entered_rewrite_phase) {
-        rewrite_phase_time = now - entered_rewrite_phase
+        rewrite_phase_time += now - entered_rewrite_phase
         entered_rewrite_phase = 0
     }
 %)
 
 @define eval_preaccess_phase_time %(
     if (entered_preaccess_phase) {
-        preaccess_phase_time = now - entered_preaccess_phase
+        preaccess_phase_time += now - entered_preaccess_phase
         entered_preaccess_phase = 0
     }
 %)
 
 @define eval_access_phase_time %(
     if (entered_access_phase) {
-        access_phase_time = now - entered_access_phase
+        access_phase_time += now - entered_access_phase
         entered_access_phase = 0
     }
 %)
@@ -99,6 +100,9 @@ probe @pfunc(ngx_http_core_find_config_phase)
         entered_preaccess_phase = 0
         entered_access_phase = 0
         entered_content_phase = 0
+        entered_upstream_connect = 0
+        entered_upstream_send = 0
+        entered_upstream_read = 0
     }
 }
 
@@ -173,7 +177,11 @@ probe @pfunc(ngx_http_log_request)
         @eval_access_phase_time
 
         if (entered_content_phase) {
-            content_phase_time = now - entered_content_phase
+            content_phase_time += now - entered_content_phase
+        }
+
+        if (!entered_log_phase) {
+            entered_log_phase = now
         }
 
         printf("\n%s %s\n", user_string_n($r->method_name->data, $r->method_name->len),
@@ -190,10 +198,22 @@ probe @pfunc(ngx_http_log_request)
                upstream_connect_time,
                upstream_send_time,
                upstream_read_time)
-
         exit()
     }
 }
+
+/*
+probe @pfunc(ngx_http_log_request).return
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+        log_phase_time = now - entered_log_phase
+        entered_log_phase = 0
+        printf("log: %dus\n", log_phase_time)
+        exit()
+    }
+}
+*/
 
 probe @pfunc(ngx_http_upstream_connect)
 {

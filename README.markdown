@@ -696,6 +696,25 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
 
 [Back to TOC](#table-of-contents)
 
+ngx-single-req-latency.sxx
+--------------------------
+
+Analyze the latency time composition in an individual request served by an Nginx server instance.
+
+```bash
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming the nginx master process pid is 7088, and the request
+    # being analyzed has the "CF" request header with non-empty header value:
+    $ ./samples/ngx-single-req-latency.sxx --arg header=CF --master 7088
+    Start tracing process 7089 7090 (/opt/nginx/sbin/nginx)...
+
+    GET /proxy/get
+        total: 2080us, rewrite: 86us, pre-access: 25us, access: 33us, content: 1860us
+        upstream: connect=416us, time-to-first-byte=895us, read=119us
+```
+
 Author
 ======
 

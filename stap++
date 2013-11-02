@@ -13,6 +13,7 @@ GetOptions("D=s@",          \(my $D_opts),
            "args",          \(my $print_args),
            "dump-src",      \(my $dump_src),
            "help",          \(my $help),
+           "master=i",      \(my $master_pid),
            "x=i",           \(my $pid),
            "e=s",           \(my $src),
            "v",             \(my $verbose),
@@ -101,12 +102,19 @@ for my $opt (@$D_opts) {
 }
 
 if (defined $pid) {
+    if (defined $master_pid) {
+        die "-x <pid> and --master <pid> are exclusive.\n";
+    }
+
     push @stap_opts, "-x $pid";
     my $exec_file = "/proc/$pid/exe";
     if (!-f $exec_file) {
         die "Nginx process $pid is not running or ",
             "you do not have enough permissions.\n";
     }
+
+    $StdVars{pid_ok} = gen_pid_test_condition();
+    $StdVars{target} = $pid;
 
     my $exec_path = readlink $exec_file;
     $StdVars{exec_path} = $exec_path;
@@ -127,6 +135,45 @@ if (defined $pid) {
 
     for my $path (sort keys %DSOs) {
         push @stap_opts, "-d $path";
+    }
+}
+
+if (defined $master_pid) {
+    #push @stap_opts, "-x $master_pid";
+    my $exec_file = "/proc/$master_pid/exe";
+    if (!-f $exec_file) {
+        die "Nginx process $master_pid is not running or ",
+            "you do not have enough permissions.\n";
+    }
+
+    my $exec_path = readlink $exec_file;
+    $StdVars{exec_path} = $exec_path;
+    push @stap_opts, "-d '$exec_path'";
+
+    # process DSO files
+    my @pids = get_child_processes($master_pid);
+    if (@pids == 0) {
+        die "No child processes found for $master_pid.\n";
+    }
+
+    $StdVars{pid_ok} = gen_pid_test_condition(\@pids);
+    $StdVars{target} = "@pids";
+
+    my $pid = $pids[0];
+    my $maps_file = "/proc/$pid/maps";
+    open my $in, $maps_file
+        or die "Cannot open $maps_file for reading: $!\n";
+
+    while (<$in>) {
+        if (m{\S+\blib\w+[^/\s]*?\.so(?:\.\d+)*$}) {
+            my $path = $&;
+            $DSOs{$path} = 1;
+            #warn "seeing $path";
+        }
+    }
+
+    for my $path (sort keys %DSOs) {
+        push @stap_opts, "-d '$path'";
     }
 }
 
@@ -348,6 +395,7 @@ Options:
     -D NM=VAL       Emit macro definition into generated C code.
     --help          Print this help.
     -I PATH         Specify the stap++ tapset library search directory.
+    --master PID    Specify the master pid whose child processes are traced.
     -v              Be verbose.
     -x PID          Sets target() to PID (also for $^exec_path and $^libxxx_path).
 
@@ -355,4 +403,42 @@ Examples:
     stap++ -x 12345 -e 'probe begin { println("hello") exit() }'
     stap++ -x 12345 infile.ss
 _EOC_
+}
+
+sub get_child_processes {
+    my $pid = shift;
+    my @files = glob "/proc/[0-9]*/stat";
+    my @children;
+    for my $file (@files) {
+        #print "file: $file\n";
+        if ($file =~ m{^/proc/$pid/}) {
+            next;
+        }
+
+        open my $in, $file or next;
+        my $line = <$in>;
+        close $in;
+        if ($line =~ /^(\d+) \S+ \S+ (\d+)/) {
+            my ($child, $parent) = ($1, $2);
+            if ($parent eq $pid) {
+                push @children, $child;
+            }
+        }
+    }
+
+    @children = sort { $a <=> $b } @children;
+    return @children;
+}
+
+sub gen_pid_test_condition {
+    my $pids = shift;
+    if (!$pids) {
+        return "pid() == target()";
+    }
+
+    my @c;
+    for my $pid (@$pids) {
+        push @c, "pid() == $pid";
+    }
+    return '(' . join(" || ", @c) . ')';
 }

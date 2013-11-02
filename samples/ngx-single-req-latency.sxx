@@ -1,0 +1,233 @@
+#!/usr/bin/env stap++
+
+/*
+ * Copyright (C) Yichun Zhang (agentzh)
+ */
+
+global matched_r
+global matched_pid
+
+global begin_time
+
+global entered_rewrite_phase, rewrite_phase_time
+global entered_preaccess_phase, preaccess_phase_time
+global entered_access_phase, access_phase_time
+global entered_content_phase, content_phase_time
+
+global entered_upstream_connect, upstream_connect_time
+global entered_upstream_send, upstream_send_time
+global entered_upstream_read, upstream_read_time
+
+global seen_find_config
+
+@define eval_rewrite_phase_time %(
+    if (entered_rewrite_phase) {
+        rewrite_phase_time = now - entered_rewrite_phase
+        entered_rewrite_phase = 0
+    }
+%)
+
+@define eval_preaccess_phase_time %(
+    if (entered_preaccess_phase) {
+        preaccess_phase_time = now - entered_preaccess_phase
+        entered_preaccess_phase = 0
+    }
+%)
+
+@define eval_access_phase_time %(
+    if (entered_access_phase) {
+        access_phase_time = now - entered_access_phase
+        entered_access_phase = 0
+    }
+%)
+
+probe @pfunc(ngx_http_handler)
+{
+    if (!matched_pid && $^pid_ok && $r == $r->main) {
+
+    %( "$^arg_header :default()" == "" %?
+        matched_r = $r
+        matched_pid = pid()
+        begin_time = gettimeofday_us()
+    %:
+        target_header = "$^arg_header"
+        target_header_len = strlen(target_header)
+
+        //printf("target header length: %d\n", target_header_len)
+
+        part = &$r->headers_in->headers->part
+        $*part := @cast(part, "ngx_list_part_t")
+
+        header = $*part->elts
+        $*header := @cast(header, "ngx_table_elt_t")
+
+        for (i = 0; /* void */; i++) {
+
+            if (i >= $*part->nelts) {
+                if ($*part->next == 0) {
+                    break
+                }
+
+                part = $*part->next
+                header = $*part->elts
+                i = 0
+            }
+
+            if ($*header[i]->key->len == target_header_len
+                && $*header[i]->key->data
+                && user_string_n($*header[i]->key->data, $*header[i]->key->len)
+                   == target_header
+                && $*header[i]->value->len > 0)
+            {
+                matched_r = $r
+                matched_pid = pid()
+                begin_time = gettimeofday_us()
+                break
+            }
+        }
+    %)
+    }
+}
+
+probe @pfunc(ngx_http_core_find_config_phase)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        seen_find_config = 1
+
+        /* for internal redirects: */
+        entered_rewrite_phase = 0
+        entered_preaccess_phase = 0
+        entered_access_phase = 0
+        entered_content_phase = 0
+    }
+}
+
+probe @pfunc(ngx_http_core_rewrite_phase)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        if (seen_find_config && !entered_rewrite_phase) {
+            entered_rewrite_phase = gettimeofday_us()
+        }
+    }
+}
+
+probe @pfunc(ngx_http_core_generic_phase)
+{
+    if (seen_find_config && pid() == matched_pid && $r == matched_r) {
+        /* pre-access phase */
+        now = gettimeofday_us()
+
+        @eval_rewrite_phase_time
+        if (!entered_preaccess_phase) {
+            entered_preaccess_phase = now
+        }
+    }
+}
+
+probe @pfunc(ngx_http_core_access_phase)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+
+        @eval_rewrite_phase_time
+        @eval_preaccess_phase_time
+        if (!entered_access_phase) {
+            entered_access_phase = now
+        }
+    }
+}
+
+probe @pfunc(ngx_http_core_try_files_phase)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+
+        @eval_rewrite_phase_time
+        @eval_preaccess_phase_time
+        @eval_access_phase_time
+    }
+}
+
+probe @pfunc(ngx_http_core_content_phase)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+
+        @eval_rewrite_phase_time
+        @eval_preaccess_phase_time
+        @eval_access_phase_time
+
+        if (!entered_content_phase) {
+            entered_content_phase = now
+        }
+    }
+}
+
+probe @pfunc(ngx_http_log_request)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+
+        @eval_rewrite_phase_time
+        @eval_preaccess_phase_time
+        @eval_access_phase_time
+
+        if (entered_content_phase) {
+            content_phase_time = now - entered_content_phase
+        }
+
+        printf("\n%s %s\n", user_string_n($r->method_name->data, $r->method_name->len),
+               $r->uri->data ? user_string_n($r->unparsed_uri->data,
+                                             $r->unparsed_uri->len)
+                             : "")
+
+        printf("    total: %dus, rewrite: %dus, pre-access: %dus, access: %dus, content: %dus\n    upstream: connect=%dus, time-to-first-byte=%dus, read=%dus\n",
+               now - begin_time,
+               rewrite_phase_time,
+               preaccess_phase_time,
+               access_phase_time,
+               content_phase_time,
+               upstream_connect_time,
+               upstream_send_time,
+               upstream_read_time)
+
+        exit()
+    }
+}
+
+probe @pfunc(ngx_http_upstream_connect)
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        entered_upstream_connect = gettimeofday_us()
+    }
+}
+
+probe @pfunc(ngx_http_upstream_process_header)
+{
+    if (entered_upstream_send && pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+        upstream_send_time += now - entered_upstream_send
+        entered_upstream_read = now
+    }
+}
+
+probe @pfunc(ngx_http_upstream_send_request)
+{
+    if (entered_upstream_connect && pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+        upstream_connect_time += now - entered_upstream_connect
+        entered_upstream_send = now
+    }
+}
+
+probe @pfunc(ngx_http_upstream_finalize_request)
+{
+    if (entered_upstream_read && pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+        upstream_read_time += now - entered_upstream_read
+    }
+}
+
+probe begin {
+    printf("Start tracing process $^target ($^exec_path)...\n")
+}

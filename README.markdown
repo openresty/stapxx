@@ -391,7 +391,7 @@ Here is an example.
 For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
 
     $ ngx-lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
-    Start tracing 14378 (/usr/local/nginx-fl/sbin/nginx-fl)
+    Start tracing 14378 (/opt/nginx/sbin/nginx)
 
     main machine code area size: 65536 bytes
     C callback machine code size: 4096 bytes
@@ -700,15 +700,38 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
 ngx-single-req-latency
 ----------------------
 
-Analyze the latency time composition in an individual request served by an Nginx server instance.
+Analyze the detailed latency time composition in an individual request served by an Nginx server instance. This tool can measure the time spent in the major Nginx request processing phases (like `rewrite` phase, `access` phase, and `content` phase). It will also measure Nginx upstream modules' latency on upstream connect() and etc.
+
+By default it just tracks the first request it sees. For example,
 
 ```bash
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
+    # assuming an nginx worker process's pid is 27327
+    $ ngx-single-req-latency.sxx -x 27327
+    Start tracing process 27327 (/opt/nginx/sbin/nginx)...
+
+    GET /thumbnail/30449.png
+        total: 88669us, rewrite: 529us, pre-access: 10us, access: 33us, content: 87973us
+        upstream: connect=8us, time-to-first-byte=87894us, read=60us
+
+    $ ngx-single-req-latency.sxx -x 27327
+    Start tracing process 27327 (/opt/nginx/sbin/nginx)...
+
+    GET /wp-content/plugins/pinterest-pin-it-button-for-images/ppibfi_pinterest.js?ver=3.6.1
+        total: 1263us, rewrite: 532us, pre-access: 35us, access: 20us, content: 595us
+        upstream: connect=7us, time-to-first-byte=434us, read=88us
+```
+
+where we use `-x <pid>` to specify an nginx worker process. We can also specify `--master <master-pid>` to monitor on all the Nginx worker processes under the master process specified.
+
+The `--arg header=HEADER` option can be used to filter out the request by a specific request header, for instance,
+
+```bash
     # assuming the nginx master process pid is 7088, and the request
-    # being analyzed has the "CF" request header with non-empty header value:
-    $ ./samples/ngx-single-req-latency.sxx --arg header=CF --master 7088
+    # being analyzed has the "Test" request header with non-empty header value:
+    $ ./samples/ngx-single-req-latency.sxx --arg header=Test --master 7088
     Start tracing process 7089 7090 (/opt/nginx/sbin/nginx)...
 
     GET /proxy/get

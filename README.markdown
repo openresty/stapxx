@@ -29,6 +29,7 @@ Table of Contents
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
     * [ngx-lua-shdict-writes](#ngx-lua-shdict-writes)
+    * [ngx-single-req-latency](#ngx-single-req-latency)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -696,8 +697,8 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
 
 [Back to TOC](#table-of-contents)
 
-ngx-single-req-latency.sxx
---------------------------
+ngx-single-req-latency
+----------------------
 
 Analyze the latency time composition in an individual request served by an Nginx server instance.
 
@@ -714,6 +715,8 @@ Analyze the latency time composition in an individual request served by an Nginx
         total: 2080us, rewrite: 86us, pre-access: 25us, access: 33us, content: 1860us
         upstream: connect=416us, time-to-first-byte=895us, read=119us
 ```
+
+[Back to TOC](#table-of-contents)
 
 Author
 ======

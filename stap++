@@ -118,7 +118,7 @@ if (defined $pid) {
 
     my $exec_path = readlink $exec_file;
     $StdVars{exec_path} = $exec_path;
-    push @stap_opts, "-d $exec_path";
+    push @stap_opts, "-d '$exec_path'";
 
     # process DSO files
     my $maps_file = "/proc/$pid/maps";
@@ -134,7 +134,7 @@ if (defined $pid) {
     }
 
     for my $path (sort keys %DSOs) {
-        push @stap_opts, "-d $path";
+        push @stap_opts, "-d '$path'";
     }
 }
 

@@ -712,16 +712,16 @@ By default it just tracks the first request it sees. For example,
     $ ngx-single-req-latency.sxx -x 27327
     Start tracing process 27327 (/opt/nginx/sbin/nginx)...
 
-    GET /thumbnail/30449.png
-        total: 88669us, rewrite: 529us, pre-access: 10us, access: 33us, content: 87973us
-        upstream: connect=8us, time-to-first-byte=87894us, read=60us
+    POST /api_json
+        total: 143596us, accept() ~ header-read: 43048us, rewrite: 8us, pre-access: 7us, access: 6us, content: 100507us
+        upstream: connect=29us, time-to-first-byte=99157us, read=103us
 
     $ ngx-single-req-latency.sxx -x 27327
     Start tracing process 27327 (/opt/nginx/sbin/nginx)...
 
-    GET /wp-content/plugins/pinterest-pin-it-button-for-images/ppibfi_pinterest.js?ver=3.6.1
-        total: 1263us, rewrite: 532us, pre-access: 35us, access: 20us, content: 595us
-        upstream: connect=7us, time-to-first-byte=434us, read=88us
+    GET /robots.txt
+        total: 61198us, accept() ~ header-read: 33410us, rewrite: 7us, pre-access: 7us, access: 5us, content: 27750us
+        upstream: connect=30us, time-to-first-byte=18955us, read=96us
 ```
 
 where we use `-x <pid>` to specify an nginx worker process. We can also specify `--master <master-pid>` to monitor on all the Nginx worker processes under the master process specified.

@@ -735,8 +735,8 @@ The `--arg header=HEADER` option can be used to filter out the request by a spec
     Start tracing process 7089 7090 (/opt/nginx/sbin/nginx)...
 
     GET /proxy/get
-        total: 2080us, rewrite: 86us, pre-access: 25us, access: 33us, content: 1860us
-        upstream: connect=416us, time-to-first-byte=895us, read=119us
+        total: 2941us, accept() ~ header-read: 354us, rewrite: 100us, pre-access: 26us, access: 23us, content: 2356us
+            upstream: connect=424us, time-to-first-byte=1059us, read=357us
 ```
 
 [Back to TOC](#table-of-contents)

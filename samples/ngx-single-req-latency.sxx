@@ -7,7 +7,7 @@
 global matched_r
 global matched_pid
 
-global begin_time
+global begin_time, init_conns, header_read_time
 
 global entered_rewrite_phase, rewrite_phase_time
 global entered_preaccess_phase, preaccess_phase_time
@@ -42,51 +42,70 @@ global seen_find_config
     }
 %)
 
-probe @pfunc(ngx_http_handler)
+probe @pfunc(ngx_http_init_connection)
 {
-    if (!matched_pid && $^pid_ok && $r == $r->main) {
+    if (!matched_r && $^pid_ok) {
+        init_conns[$c, pid()] = gettimeofday_us()
+    }
+}
 
-    %( "$^arg_header :default()" == "" %?
-        matched_r = $r
-        matched_pid = pid()
-        begin_time = gettimeofday_us()
-    %:
-        target_header = "$^arg_header"
-        target_header_len = strlen(target_header)
+probe @pfunc(ngx_http_close_connection) {
+    if (!begin_time) {
+        delete init_conns[$c, pid()]
+    }
+}
 
-        //printf("target header length: %d\n", target_header_len)
+probe @pfunc(ngx_http_process_request)
+{
+    if (!matched_pid && $^pid_ok) {
 
-        part = &$r->headers_in->headers->part
-        $*part := @cast(part, "ngx_list_part_t")
+        init_conn = init_conns[$r->connection, pid()]
+        if (init_conn) {
 
-        header = $*part->elts
-        $*header := @cast(header, "ngx_table_elt_t")
+        %( "$^arg_header :default()" == "" %?
+            matched_r = $r
+            matched_pid = pid()
+            header_read_time = gettimeofday_us()
+            begin_time = init_conn
+        %:
+            target_header = "$^arg_header"
+            target_header_len = strlen(target_header)
 
-        for (i = 0; /* void */; i++) {
+            //printf("target header length: %d\n", target_header_len)
 
-            if (i >= $*part->nelts) {
-                if ($*part->next == 0) {
-                    break
+            part = &$r->headers_in->headers->part
+            $*part := @cast(part, "ngx_list_part_t")
+
+            header = $*part->elts
+            $*header := @cast(header, "ngx_table_elt_t")
+
+            for (i = 0; /* void */; i++) {
+
+                if (i >= $*part->nelts) {
+                    if ($*part->next == 0) {
+                        break
+                    }
+
+                    part = $*part->next
+                    header = $*part->elts
+                    i = 0
                 }
 
-                part = $*part->next
-                header = $*part->elts
-                i = 0
+                if ($*header[i]->key->len == target_header_len
+                    && $*header[i]->key->data
+                    && user_string_n($*header[i]->key->data, $*header[i]->key->len)
+                       == target_header
+                    && $*header[i]->value->len > 0)
+                {
+                    matched_r = $r
+                    matched_pid = pid()
+                    header_read_time = gettimeofday_us()
+                    begin_time = init_conns[$r->connection, matched_pid]
+                    break
+                }
             }
-
-            if ($*header[i]->key->len == target_header_len
-                && $*header[i]->key->data
-                && user_string_n($*header[i]->key->data, $*header[i]->key->len)
-                   == target_header
-                && $*header[i]->value->len > 0)
-            {
-                matched_r = $r
-                matched_pid = pid()
-                begin_time = gettimeofday_us()
-                break
-            }
+        %)
         }
-    %)
     }
 }
 
@@ -189,8 +208,9 @@ probe @pfunc(ngx_http_log_request)
                                              $r->unparsed_uri->len)
                              : "")
 
-        printf("    total: %dus, rewrite: %dus, pre-access: %dus, access: %dus, content: %dus\n    upstream: connect=%dus, time-to-first-byte=%dus, read=%dus\n",
+        printf("    total: %dus, accept() ~ header-read: %dus, rewrite: %dus, pre-access: %dus, access: %dus, content: %dus\n    upstream: connect=%dus, time-to-first-byte=%dus, read=%dus\n",
                now - begin_time,
+               header_read_time - begin_time,
                rewrite_phase_time,
                preaccess_phase_time,
                access_phase_time,

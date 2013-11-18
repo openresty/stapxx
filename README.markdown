@@ -30,6 +30,7 @@ Table of Contents
     * [sample-bt-leaks](#sample-bt-leaks)
     * [ngx-lua-shdict-writes](#ngx-lua-shdict-writes)
     * [ngx-single-req-latency](#ngx-single-req-latency)
+    * [ngx-rewrite-latency-distr](#ngx-rewrite-latency-distr)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -788,6 +789,8 @@ You can also specify the `--arg time=SECONDS` option to let the tool quit automa
     32768 |                                                    0
     65536 |                                                    0
 ```
+
+[Back to TOC](#table-of-contents)
 
 Author
 ======

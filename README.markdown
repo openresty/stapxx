@@ -741,6 +741,54 @@ The `--arg header=HEADER` option can be used to filter out the request by a spec
 
 [Back to TOC](#table-of-contents)
 
+ngx-rewrite-latency-distr
+-------------------------
+
+Measure the rewrite-phase latency for each Nginx request (including subrequest) in an Nginx worker process specified and output the distribution of the latency.
+
+By default, you hit Ctrl-C to end the sampling process:
+
+```bash
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming that the Nginx worker process to be analyzed is
+    # of the pid 10972:
+    $ ./samples/ngx-rewrite-latency-distr.sxx -x 10972
+    Start tracing process 10972 (/opt/nginx/sbin/nginx)...
+    Hit Ctrl-C to end.
+    ^C
+    Distribution of the rewrite phase latencies (in microseconds) for 478 samples:
+    (min/avg/max: 19407/20465/21717)
+    value |-------------------------------------------------- count
+     4096 |                                                     0
+     8192 |                                                     0
+    16384 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    478
+    32768 |                                                     0
+    65536 |                                                     0
+```
+
+You can also specify the `--arg time=SECONDS` option to let the tool quit automatically after the specified time (in seconds). For example,
+
+```bash
+    $ ./samples/ngx-rewrite-latency-distr.sxx -x 12004 --arg time=3
+    Start tracing process 12004 (/opt/nginx/sbin/nginx)...
+    Please wait for 3 seconds...
+
+    Distribution of the rewrite phase latencies (in microseconds) for 46 samples:
+    (min/avg/max: 0/19533/21009)
+    value |-------------------------------------------------- count
+        0 |@@                                                  2
+        1 |                                                    0
+        2 |                                                    0
+          ~
+     4096 |                                                    0
+     8192 |                                                    0
+    16384 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       44
+    32768 |                                                    0
+    65536 |                                                    0
+```
+
 Author
 ======
 

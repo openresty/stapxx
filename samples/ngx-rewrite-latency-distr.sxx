@@ -1,0 +1,116 @@
+#!/usr/bin/env stap++
+
+/*
+ * Copyright (C) Yichun Zhang (agentzh)
+ */
+
+global entered_rewrite_phase, rewrite_phase_time, seen_find_config
+global latency_stats
+
+@define eval_rewrite_phase_time %(
+    if (entered_rewrite_phase[r]) {
+        rewrite_phase_time[r] += now - entered_rewrite_phase[r]
+        entered_rewrite_phase[r] = 0
+    }
+%)
+
+probe @pfunc(ngx_http_core_find_config_phase)
+{
+    r = $r
+    seen_find_config[r] = 1
+    /* for internal redirects: */
+    entered_rewrite_phase[r] = 0
+}
+
+probe @pfunc(ngx_http_core_rewrite_phase)
+{
+    r = $r
+    if (seen_find_config[r] && !entered_rewrite_phase[r]) {
+        entered_rewrite_phase[r] = gettimeofday_us()
+    }
+}
+
+probe @pfunc(ngx_http_core_generic_phase)
+{
+    r = $r
+    if (seen_find_config[r]) {
+        /* pre-access phase */
+        now = gettimeofday_us()
+        @eval_rewrite_phase_time
+    }
+}
+
+probe @pfunc(ngx_http_core_access_phase)
+{
+    now = gettimeofday_us()
+    r = $r
+    @eval_rewrite_phase_time
+}
+
+probe @pfunc(ngx_http_core_try_files_phase)
+{
+    now = gettimeofday_us()
+    r = $r
+    @eval_rewrite_phase_time
+}
+
+probe @pfunc(ngx_http_core_content_phase)
+{
+    now = gettimeofday_us()
+    r = $r
+    @eval_rewrite_phase_time
+}
+
+probe @pfunc(ngx_http_log_request)
+{
+    now = gettimeofday_us()
+    r = $r
+    @eval_rewrite_phase_time
+
+    latency_stats <<< rewrite_phase_time[r]
+    delete rewrite_phase_time[r]
+    delete entered_rewrite_phase[r]
+    delete seen_find_config[r]
+}
+
+probe end {
+    count = @count(latency_stats)
+    if (count == 0) {
+        printf("No samples observed so far.\n")
+
+    } else {
+        printf("\nDistribution of the rewrite phase latencies (in microseconds) for %d samples:\n",
+               count)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(latency_stats),
+               @avg(latency_stats), @max(latency_stats))
+        print(@hist_log(latency_stats))
+    }
+}
+
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)
+
+/*
+probe @pfunc(ngx_http_log_request).return
+{
+    if (pid() == matched_pid && $r == matched_r) {
+        now = gettimeofday_us()
+        log_phase_time = now - entered_log_phase
+        entered_log_phase = 0
+        printf("log: %dus\n", log_phase_time)
+        exit()
+    }
+}
+*/
+
+probe begin {
+    printf("Start tracing process $^target ($^exec_path)...\n")
+    %( "$^arg_time" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}

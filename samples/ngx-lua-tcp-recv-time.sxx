@@ -36,8 +36,8 @@ probe @pfunc(ngx_http_lua_socket_tcp_receive_retval_handler)
     begin = recv_begin[r, u]
     if (begin) {
         stats <<< gettimeofday_us() - begin
-        delete recv_begin[r, u]
     }
+    delete recv_begin[r, u]
 }
 
 probe begin {

@@ -1,0 +1,70 @@
+#!/usr/bin/env stap++
+
+/*
+ * Copyright (C) Yichun Zhang (agentzh)
+ */
+
+global active_reqs
+global recv_begin
+global stats
+
+probe @pfunc(ngx_http_process_request)
+{
+    active_reqs[$r] = 1
+}
+
+probe @pfunc(ngx_http_lua_socket_udp_read)
+{
+    r = $r
+    u = $u
+    if (active_reqs[r]) {
+        if (!recv_begin[r, u]) {
+            recv_begin[r, u] = gettimeofday_us()
+        }
+    }
+}
+
+probe @pfunc(ngx_http_log_request)
+{
+    delete active_reqs[$r]
+}
+
+probe @pfunc(ngx_http_lua_socket_udp_receive_retval_handler)
+{
+    r = $r
+    u = $u
+    begin = recv_begin[r, u]
+    if (begin) {
+        stats <<< gettimeofday_us() - begin
+    }
+    delete recv_begin[r, u]
+}
+
+probe begin {
+    printf("Start tracing process %d ($^exec_path)...\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)
+
+probe end {
+    count = @count(stats)
+    if (count == 0) {
+        printf("\nNo samples found so far.\n")
+
+    } else {
+        printf("\nDistribution of the ngx_lua ngx.socket.udp receive latencies (in microseconds) for %d samples:\n",
+               count)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(stats), @avg(stats),
+               @max(stats))
+        print(@hist_log(stats))
+    }
+}

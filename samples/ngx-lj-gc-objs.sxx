@@ -144,7 +144,15 @@ probe @pfunc(ngx_process_events_and_timers)
         printf("JIT state size: %d bytes\n", jit_state_size)
     }
 
-    sizetmpbuf = $*g->tmpbuf->sz
+    if (@defined($*g->tmpbuf->sz)) {
+        /* for LuaJIT 2.0 */
+        sizetmpbuf = $*g->tmpbuf->sz
+
+    } else {
+        /* for LuaJIT 2.1 */
+        sizetmpbuf = $*g->tmpbuf->e->ptr32 - $*g->tmpbuf->b->ptr32
+    }
+
     if (sizetmpbuf) {
         total += sizetmpbuf
         printf("global state tmpbuf size: %d bytes\n", sizetmpbuf)

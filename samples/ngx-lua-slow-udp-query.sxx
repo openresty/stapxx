@@ -73,7 +73,7 @@ probe @pfunc(ngx_http_lua_socket_udp_receive_retval_handler)
         if (elapsed >= $^arg_threshold :default(1000000)) {
             printf("u->ft_type: %d, elapsed: %dus\n", $u->ft_type, elapsed)
             query = queries[$u->udp_connection->connection]
-            printf("Query bytes (hex dump):\n%s", query)
+            printf("Query bytes (hex dump):\n%s\n", query)
             exit()
         }
     }

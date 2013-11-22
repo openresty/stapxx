@@ -28,7 +28,11 @@ probe @pfunc(ngx_unix_send)
         size = $size
         query = ""
         for (i = 0; i < size; i++) {
-            query .= sprintf(" %02x", $buf[i])
+            if ((i + 1) % 10 == 0) {
+                query .= sprintf(" %02x\n", $buf[i])
+            } else {
+                query .= sprintf(" %02x", $buf[i])
+            }
         }
         queries[$c] = query
     }
@@ -67,10 +71,9 @@ probe @pfunc(ngx_http_lua_socket_udp_receive_retval_handler)
     if (begin) {
         elapsed = gettimeofday_us() - begin
         if (elapsed >= $^arg_threshold :default(1000000)) {
-            warn(sprintf("u->ft_type: %d, elapsed: %dus", $u->ft_type,
-                         elapsed))
+            printf("u->ft_type: %d, elapsed: %dus\n", $u->ft_type, elapsed)
             query = queries[$u->udp_connection->connection]
-            printf("%s", query)
+            printf("Query bytes (hex dump):\n%s", query)
             exit()
         }
     }
@@ -78,7 +81,7 @@ probe @pfunc(ngx_http_lua_socket_udp_receive_retval_handler)
 }
 
 probe begin {
-    warn(sprintf("Start tracing process %d ($^exec_path)...\n", target()))
-    warn(sprintf("Hit Ctrl-C to end.\n"))
+    printf("Start tracing process %d ($^exec_path)...\n", target())
+    printf("Hit Ctrl-C to end.\n")
 }
 

@@ -25,6 +25,11 @@ probe @pfunc(ngx_http_lua_socket_tcp_read)
     }
 }
 
+probe @pfunc(ngx_http_lua_socket_tcp_finalize)
+{
+    delete recv_begin[$r, $u]
+}
+
 probe @pfunc(ngx_http_lua_socket_tcp_receive_retval_handler)
 {
     r = $r

@@ -29,6 +29,11 @@ probe @pfunc(ngx_http_log_request)
     delete active_reqs[$r]
 }
 
+probe @pfunc(ngx_http_lua_socket_tcp_finalize)
+{
+    delete recv_begin[$r, $u]
+}
+
 probe @pfunc(ngx_http_lua_socket_tcp_receive_retval_handler)
 {
     r = $r

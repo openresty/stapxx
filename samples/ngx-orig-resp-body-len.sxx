@@ -7,7 +7,10 @@
 global resp_sizes
 global stats
 
-probe @pfunc(ngx_http_postpone_filter)
+probe @pfunc(ngx_http_charset_body_filter)!,
+      @pfunc(ngx_http_postpone_filter)!,
+      @pfunc(ngx_http_gzip_body_filter)!,
+      @pfunc(ngx_http_chunked_body_filter)
 {
     r = $r
     if (r == $r->main && $in) {

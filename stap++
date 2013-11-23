@@ -308,15 +308,21 @@ sub find_dso_path {
         return $path;
     }
 
-    for my $path (keys %DSOs) {
+    my $found_path;
+    for my $path (sort keys %DSOs) {
         #warn "checking $path against $pat";
         if ($path =~ m{\b\Q$pat\E[^/\s]*?\.so(?:\.\d+)*$}) {
+            if ($found_path) {
+                warn "Ignored ambiguous library $path for \"$pat\"\n";
+                next;
+            }
+
             $LibPaths{$pat} = $path;
-            return $path;
+            $found_path = $path;
         }
     }
 
-    return undef;
+    return $found_path;
 }
 
 sub read_src_file {

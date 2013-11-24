@@ -32,6 +32,7 @@ Table of Contents
     * [ngx-single-req-latency](#ngx-single-req-latency)
     * [ngx-rewrite-latency-distr](#ngx-rewrite-latency-distr)
     * [ngx-lua-exec-time](#ngx-lua-exec-time)
+    * [ngx-lua-tcp-recv-time](#ngx-lua-tcp-recv-time)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -863,6 +864,8 @@ value |-------------------------------------------------- count
  4096 |                                                      0
  8192 |                                                      0
 ```
+
+[Back to TOC](#table-of-contents)
 
 Author
 ======

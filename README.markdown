@@ -35,6 +35,7 @@ Table of Contents
     * [ngx-lua-tcp-recv-time](#ngx-lua-tcp-recv-time)
     * [ngx-lua-tcp-total-recv-time](#ngx-lua-tcp-total-recv-time)
     * [ngx-lua-udp-recv-time](#ngx-lua-udp-recv-time)
+    * [ngx-lua-udp-total-recv-time](#ngx-lua-udp-total-recv-time)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -954,6 +955,53 @@ Distribution of the ngx_lua ngx.socket.udp receive latencies (in microseconds) f
  524288 |                                                    1
 1048576 |                                                    0
 2097152 |                                                    0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-udp-total-recv-time
+---------------------------
+
+Similar to the [ngx-lua-udp-recv-time](#ngx-lua-udp-recv-time) tool, but accumulate the latencies by every request served by the specified Nginx process.
+
+This tool is useful to see how much the UDP/unix-domain cosocket reads contribute to the total request latency.
+
+But note that, however, latency of cosocket reads in different ngx_lua "light threads" within the same request will be simply added up, so in case of multiple "light threads" reading at the same time will lead to larger total latency than the actual case.
+
+Requests without UDP/unix-domain cosocket reads will simply get skipped.
+
+Below is an example,
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 14464.
+$ ngx-lua-udp-total-recv-time.sxx -x 14464 --arg time=60
+Start tracing process 14464 (/opt/nginx/sbin/nginx)...
+Please wait for 60 seconds...
+
+Distribution of the ngx_lua ngx.socket.udp receive latencies (accumulated in each request, in microseconds) for 101 samples:
+(min/avg/max: 477/60711/2991309)
+  value |-------------------------------------------------- count
+     64 |                                                    0
+    128 |                                                    0
+    256 |@                                                   2
+    512 |@@@@@@@@@@@@@                                      27
+   1024 |@@@@@@@@@@@@@@@@@@@@@@@@@                          51
+   2048 |@@@@@@                                             12
+   4096 |@                                                   3
+   8192 |                                                    0
+  16384 |                                                    0
+  32768 |                                                    1
+  65536 |                                                    0
+ 131072 |                                                    1
+ 262144 |                                                    0
+ 524288 |@                                                   2
+1048576 |                                                    1
+2097152 |                                                    1
+4194304 |                                                    0
+8388608 |                                                    0
 ```
 
 [Back to TOC](#table-of-contents)

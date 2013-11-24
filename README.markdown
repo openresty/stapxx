@@ -34,6 +34,7 @@ Table of Contents
     * [ngx-lua-exec-time](#ngx-lua-exec-time)
     * [ngx-lua-tcp-recv-time](#ngx-lua-tcp-recv-time)
     * [ngx-lua-tcp-total-recv-time](#ngx-lua-tcp-total-recv-time)
+    * [ngx-lua-udp-recv-time](#ngx-lua-udp-recv-time)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -888,7 +889,7 @@ Below is an example,
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 14464.
-ngx-lua-tcp-total-recv-time.sxx  -x 14464 --arg time=60
+$ ngx-lua-tcp-total-recv-time.sxx  -x 14464 --arg time=60
 Start tracing process 14464 (/opt/nginx/sbin/nginx)...
 Please wait for 60 seconds...
 
@@ -912,6 +913,47 @@ Distribution of the ngx_lua ngx.socket.tcp receive latencies (accumulated in eac
  32768 |                                                     2
  65536 |                                                     0
 131072 |                                                     0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-udp-recv-time
+---------------------
+
+This tool measures the latency involved in individual [receive](https://github.com/chaoslawful/lua-nginx-module#udpsockreceive) method calls on [ngx_lua](https://github.com/chaoslawful/lua-nginx-module#readme) module's [ngx.socket.udp](https://github.com/chaoslawful/lua-nginx-module#ngxsocketudp) objects in a specified Nginx worker process and outputs the distribution of the latencies.
+
+This tool analyzes both UDP and unix domain cosockets.
+
+Below is an example:
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 29906.
+$ ngx-lua-udp-recv-time.sxx -x 29906 --arg time=60
+Start tracing process 29906 (/opt/nginx/sbin/nginx)...
+Please wait for 60 seconds...
+
+Distribution of the ngx_lua ngx.socket.udp receive latencies (in microseconds) for 114 samples:
+(min/avg/max: 433/12468/940008)
+  value |-------------------------------------------------- count
+     64 |                                                    0
+    128 |                                                    0
+    256 |@@@@                                                9
+    512 |@@@@@@@@@@@@@@@                                    30
+   1024 |@@@@@@@@@@@@@@@@@@@@@@@@@@@                        54
+   2048 |@@@@@@@@                                           16
+   4096 |@                                                   2
+   8192 |                                                    1
+  16384 |                                                    0
+  32768 |                                                    0
+  65536 |                                                    0
+ 131072 |                                                    0
+ 262144 |                                                    1
+ 524288 |                                                    1
+1048576 |                                                    0
+2097152 |                                                    0
 ```
 
 [Back to TOC](#table-of-contents)

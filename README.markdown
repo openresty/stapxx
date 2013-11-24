@@ -33,6 +33,7 @@ Table of Contents
     * [ngx-rewrite-latency-distr](#ngx-rewrite-latency-distr)
     * [ngx-lua-exec-time](#ngx-lua-exec-time)
     * [ngx-lua-tcp-recv-time](#ngx-lua-tcp-recv-time)
+    * [ngx-lua-tcp-total-recv-time](#ngx-lua-tcp-total-recv-time)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -863,6 +864,52 @@ value |-------------------------------------------------- count
  2048 |                                                     11
  4096 |                                                      0
  8192 |                                                      0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-tcp-total-recv-time
+---------------------------
+
+Similar to the [ngx-lua-tcp-recv-time](#ngx-lua-tcp-recv-time) tool, but accumulate the latencies by every request served by the specified Nginx process.
+
+This tool is useful to see how much the TCP/streaming cosocket reads contribute to the total request latency.
+
+But note that, however, latency of cosocket reads in different ngx_lua "light threads" within the same request will be simply added up, so in case of multiple "light threads" reading at the same time will lead to larger total latency than the actual case.
+
+Requests without TCP/stream cosocket reads will simply get skipped.
+
+Below is an example,
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 14464.
+ngx-lua-tcp-total-recv-time.sxx  -x 14464 --arg time=60
+Start tracing process 14464 (/opt/nginx/sbin/nginx)...
+Please wait for 60 seconds...
+
+Distribution of the ngx_lua ngx.socket.tcp receive latencies (accumulated in each request, in microseconds) for 649 samples:
+(min/avg/max: 8/621/58875)
+ value |-------------------------------------------------- count
+     2 |                                                     0
+     4 |                                                     0
+     8 |                                                     2
+    16 |                                                     0
+    32 |                                                     2
+    64 |@@@@@                                               40
+   128 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    329
+   256 |@@@@@@@@@@@@@@                                      98
+   512 |@@@@@@@@@@@@@@@                                    109
+  1024 |@@@@@@@                                             51
+  2048 |@                                                   13
+  4096 |                                                     2
+  8192 |                                                     1
+ 16384 |                                                     0
+ 32768 |                                                     2
+ 65536 |                                                     0
+131072 |                                                     0
 ```
 
 [Back to TOC](#table-of-contents)

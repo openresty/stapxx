@@ -31,6 +31,7 @@ Table of Contents
     * [ngx-lua-shdict-writes](#ngx-lua-shdict-writes)
     * [ngx-single-req-latency](#ngx-single-req-latency)
     * [ngx-rewrite-latency-distr](#ngx-rewrite-latency-distr)
+    * [ngx-lua-exec-time](#ngx-lua-exec-time)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -788,6 +789,39 @@ You can also specify the `--arg time=SECONDS` option to let the tool quit automa
     16384 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       44
     32768 |                                                    0
     65536 |                                                    0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-exec-time
+-----------------
+
+This tool measures the pure Lua code executation time (excluding any nonblocking IO time) accumulated in every request served by the specified Nginx worker at real-time and outputs the distribution of the latencies.
+
+Below is an example:
+
+```bash
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming one nginx worker process has the pid 13501.
+    $ ngx-lua-exec-time.sxx -x 13501 --arg time=60
+    Start tracing process 13501 (/opt/nginx/sbin/nginx)...
+    Please wait for 60 seconds...
+
+    Distribution of Lua code pure execution time (accumulated in each request, in microseconds) for 1605 samples:
+    (min/avg/max: 92/618/2841)
+    value |-------------------------------------------------- count
+       16 |                                                     0
+       32 |                                                     0
+       64 |                                                     1
+      128 |                                                    13
+      256 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    715
+      512 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  737
+     1024 |@@@@@@@@                                           130
+     2048 |                                                     9
+     4096 |                                                     0
+     8192 |                                                     0
 ```
 
 [Back to TOC](#table-of-contents)

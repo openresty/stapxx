@@ -826,6 +826,42 @@ Below is an example:
 
 [Back to TOC](#table-of-contents)
 
+ngx-lua-tcp-recv-time
+---------------------
+
+This tool measures the latency involved in individual [receive](https://github.com/chaoslawful/lua-nginx-module#tcpsockreceive) method calls or readers returned from the [receiveuntil](https://github.com/chaoslawful/lua-nginx-module#tcpsockreceiveuntil) method calls on [ngx_lua](https://github.com/chaoslawful/lua-nginx-module#readme) module's [ngx.socket.tcp](https://github.com/chaoslawful/lua-nginx-module#ngxsockettcp) objects in a specified Nginx worker process and outputs the distribution of the latencies.
+
+Below is an example:
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 14464.
+$ ngx-lua-tcp-recv-time.sxx -x 14464 --arg time=60
+Start tracing process 14464 (/usr/local/nginx-fl/sbin/nginx-fl)...
+Please wait for 60 seconds...
+
+Distribution of the ngx_lua ngx.socket.tcp receive latencies (in microseconds) for 3356 samples:
+(min/avg/max: 1/74/3099)
+value |-------------------------------------------------- count
+    0 |                                                      0
+    1 |                                                     12
+    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  2194
+    4 |@@                                                  107
+    8 |                                                      7
+   16 |                                                      3
+   32 |                                                     38
+   64 |@@@@@@@@@@@@@@                                      631
+  128 |@@@                                                 140
+  256 |@@                                                  106
+  512 |@                                                    82
+ 1024 |                                                     25
+ 2048 |                                                     11
+ 4096 |                                                      0
+ 8192 |                                                      0
+```
+
 Author
 ======
 

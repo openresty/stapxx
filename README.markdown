@@ -335,7 +335,7 @@ we could keep the context switching rate low.
 ngx-lj-gc
 ---------
 
-This tool analyses the LuaJIT 2.0 GC in the specified Nginx worker process via the [ngx_lua](http://wiki.nginx.org/HttpLuaModule) mdoule.
+This tool analyses the LuaJIT 2.0/2.1 GC in the specified Nginx worker process via the [ngx_lua](http://wiki.nginx.org/HttpLuaModule) mdoule.
 
 For now, it just prints out the total memory currently allocated in the LuaJIT GC. For example,
 
@@ -357,7 +357,7 @@ according to the GC object's types.
 
 This tool reveals exactly how the memory is distributed among all Lua value types, which is useful for optimizing Lua code's memory usage and debugging memory leak issues in the Lua programs.
 
-For now, only LuaJIT 2.0 is supported.
+For now, both LuaJIT 2.0 and LuaJIT 2.1 are supported.
 
 Here is an example.
 

@@ -866,6 +866,8 @@ value |-------------------------------------------------- count
  8192 |                                                      0
 ```
 
+See also the [ngx-lua-tcp-total-recv-time](#ngx-lua-tcp-total-recv-time) tool.
+
 [Back to TOC](#table-of-contents)
 
 ngx-lua-tcp-total-recv-time

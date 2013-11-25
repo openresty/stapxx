@@ -36,6 +36,7 @@ Table of Contents
     * [ngx-lua-tcp-total-recv-time](#ngx-lua-tcp-total-recv-time)
     * [ngx-lua-udp-recv-time](#ngx-lua-udp-recv-time)
     * [ngx-lua-udp-total-recv-time](#ngx-lua-udp-total-recv-time)
+    * [ngx-orig-resp-body-len](#ngx-orig-resp-body-len)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -1002,6 +1003,55 @@ Distribution of the ngx_lua ngx.socket.udp receive latencies (accumulated in eac
 2097152 |                                                    1
 4194304 |                                                    0
 8388608 |                                                    0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-orig-resp-body-len
+----------------------
+
+This tool analyzes the original response body size (before going through the gzip filter module or other custom filter modules) served by Nginx and dumps out the distribution.
+
+Below is an example:
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 3781.
+$ ngx-orig-resp-body-len.sxx -x 3781 --arg time=30
+Start tracing process 3781 (/opt/nginx/sbin/nginx)...
+Please wait for 30 seconds...
+
+Distribution of original response body sizes (in bytes) for 1634 samples:
+(min/avg/max: 0/55006/6345380)
+   value |-------------------------------------------------- count
+       0 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@              225
+       1 |                                                     5
+       2 |                                                     5
+       4 |                                                     3
+       8 |                                                     4
+      16 |@                                                   11
+      32 |@@@@@@                                              37
+      64 |@@@@                                                26
+     128 |@@@@@@@@@                                           56
+     256 |@@@@@@@@                                            48
+     512 |@@@@@@@@@@@@@                                       82
+    1024 |@@@@@@@@@@@@@@@@@                                  107
+    2048 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               216
+    4096 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@        258
+    8192 |@@@@@@@@@@@@@@@@@@@@                               121
+   16384 |@@@@@@@@@@@@@@@@@@@@@                              127
+   32768 |@@@@@@@@@@@@@@@                                     94
+   65536 |@@@@@@@@@@@@@@@                                     91
+  131072 |@@@@@@@@@                                           56
+  262144 |@@@@@                                               31
+  524288 |@@@                                                 18
+ 1048576 |@                                                    8
+ 2097152 |                                                     3
+ 4194304 |                                                     2
+ 8388608 |                                                     0
+16777216 |                                                     0
 ```
 
 [Back to TOC](#table-of-contents)

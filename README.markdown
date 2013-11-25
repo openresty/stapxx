@@ -1056,6 +1056,44 @@ Distribution of original response body sizes (in bytes) for 1634 samples:
 
 [Back to TOC](#table-of-contents)
 
+zlib-deflate-chunk-size
+-----------------------
+
+This tool records the data chunk size fed into zlib `deflate()` and `deflateEnd()` calls in the user process specified by pid.
+
+Below is an example:
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 3781.
+$ ./samples/zlib-deflate-chunk-size.sxx -x 3781 --arg time=30
+Start tracing process 3781 (/opt/nginx/sbin/nginx)...
+Please wait for 30 seconds...
+
+Distribution of zlib deflate chunk sizes (in bytes) for 3975 samples:
+(min/avg/max: 0/2744/8192)
+value |-------------------------------------------------- count
+    0 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  988
+    1 |@@@                                                 61
+    2 |@@                                                  40
+    4 |@@                                                  41
+    8 |@                                                   25
+   16 |@@                                                  41
+   32 |@                                                   30
+   64 |@@                                                  48
+  128 |@@@                                                 64
+  256 |@@@                                                 76
+  512 |@@@@@@@@@@                                         201
+ 1024 |@@@@@@@@@@@@@@@@@@@@@@@@@                          511
+ 2048 |@@@@@@@@@@@@@@@@@@@@@@@@                           487
+ 4096 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      905
+ 8192 |@@@@@@@@@@@@@@@@@@@@@@                             457
+16384 |                                                     0
+32768 |                                                     0
+```
+
 Author
 ======
 

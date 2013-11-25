@@ -37,6 +37,7 @@ Table of Contents
     * [ngx-lua-udp-recv-time](#ngx-lua-udp-recv-time)
     * [ngx-lua-udp-total-recv-time](#ngx-lua-udp-total-recv-time)
     * [ngx-orig-resp-body-len](#ngx-orig-resp-body-len)
+    * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -1093,6 +1094,8 @@ value |-------------------------------------------------- count
 16384 |                                                     0
 32768 |                                                     0
 ```
+
+[Back to TOC](#table-of-contents)
 
 Author
 ======

@@ -371,7 +371,7 @@ Here is an example.
     $ export PATH=$PWD:$PATH
 
     # assuming the nginx worker pid is 5686:
-    $ ngx-lj-gc-objs.sxx -x 5686
+    $ ./samples/ngx-lj-gc-objs.sxx -x 5686
     Start tracing 5686 (/opt/nginx/sbin/nginx)
 
     main machine code area size: 65536 bytes
@@ -397,7 +397,7 @@ Here is an example.
 
 For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
 
-    $ ngx-lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
+    $ ./samples/ngx-lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
     Start tracing 14378 (/opt/nginx/sbin/nginx)
 
     main machine code area size: 65536 bytes
@@ -665,7 +665,7 @@ Below is an example:
     $ export PATH=$PWD:$PATH
 
     # assuming one nginx worker process has the pid 28723.
-    $ ngx-lua-shdict-writes.sxx -x 28723
+    $ ./samples/ngx-lua-shdict-writes.sxx -x 28723
     WARNING: Tracing process 28723 (/opt/nginx/sbin/nginx).
     Hit Ctrl-C to end.
     [1383177226] add key=visitor::127.3.20.88 value_len=-1 dict=locks
@@ -687,7 +687,7 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
 
 ```bash
     # assuming one nginx worker process has the pid 28723.
-    $ ngx-lua-shdict-writes.sxx -x 28723 --arg dict=cpage_cache
+    $ ./samples/ngx-lua-shdict-writes.sxx -x 28723 --arg dict=cpage_cache
     WARNING: Tracing process 28723 (/opt/nginx/sbin/nginx).
     Hit Ctrl-C to end.
     [1383177035] set key=cpage::/cpage/cf-error/1000s/838156:4891573 value_len=7 dict=cpage_cache
@@ -716,14 +716,14 @@ By default it just tracks the first request it sees. For example,
     $ export PATH=$PWD:$PATH
 
     # assuming an nginx worker process's pid is 27327
-    $ ngx-single-req-latency.sxx -x 27327
+    $ ./samples/ngx-single-req-latency.sxx -x 27327
     Start tracing process 27327 (/opt/nginx/sbin/nginx)...
 
     POST /api_json
         total: 143596us, accept() ~ header-read: 43048us, rewrite: 8us, pre-access: 7us, access: 6us, content: 100507us
         upstream: connect=29us, time-to-first-byte=99157us, read=103us
 
-    $ ngx-single-req-latency.sxx -x 27327
+    $ ./samples/ngx-single-req-latency.sxx -x 27327
     Start tracing process 27327 (/opt/nginx/sbin/nginx)...
 
     GET /robots.txt
@@ -812,7 +812,7 @@ Below is an example:
     $ export PATH=$PWD:$PATH
 
     # assuming one nginx worker process has the pid 13501.
-    $ ngx-lua-exec-time.sxx -x 13501 --arg time=60
+    $ ./samples/ngx-lua-exec-time.sxx -x 13501 --arg time=60
     Start tracing process 13501 (/opt/nginx/sbin/nginx)...
     Please wait for 60 seconds...
 
@@ -845,7 +845,7 @@ Below is an example:
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 14464.
-$ ngx-lua-tcp-recv-time.sxx -x 14464 --arg time=60
+$ ./samples/ngx-lua-tcp-recv-time.sxx -x 14464 --arg time=60
 Start tracing process 14464 (/opt/nginx/sbin/nginx)...
 Please wait for 60 seconds...
 
@@ -891,7 +891,7 @@ Below is an example,
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 14464.
-$ ngx-lua-tcp-total-recv-time.sxx  -x 14464 --arg time=60
+$ ./samples/ngx-lua-tcp-total-recv-time.sxx  -x 14464 --arg time=60
 Start tracing process 14464 (/opt/nginx/sbin/nginx)...
 Please wait for 60 seconds...
 
@@ -933,7 +933,7 @@ Below is an example:
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 29906.
-$ ngx-lua-udp-recv-time.sxx -x 29906 --arg time=60
+$ ./samples/ngx-lua-udp-recv-time.sxx -x 29906 --arg time=60
 Start tracing process 29906 (/opt/nginx/sbin/nginx)...
 Please wait for 60 seconds...
 
@@ -978,7 +978,7 @@ Below is an example,
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 14464.
-$ ngx-lua-udp-total-recv-time.sxx -x 14464 --arg time=60
+$ ./samples/ngx-lua-udp-total-recv-time.sxx -x 14464 --arg time=60
 Start tracing process 14464 (/opt/nginx/sbin/nginx)...
 Please wait for 60 seconds...
 
@@ -1019,7 +1019,7 @@ Below is an example:
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 3781.
-$ ngx-orig-resp-body-len.sxx -x 3781 --arg time=30
+$ ./samples/ngx-orig-resp-body-len.sxx -x 3781 --arg time=30
 Start tracing process 3781 (/opt/nginx/sbin/nginx)...
 Please wait for 30 seconds...
 

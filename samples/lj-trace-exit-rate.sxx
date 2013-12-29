@@ -1,0 +1,20 @@
+#!/usr/bin/env stap++
+
+# check how many times LuaJIT exits a compiled trace every second.
+
+global c
+
+probe process("$^libluajit_path").function("lj_trace_exit") {
+    c++
+}
+
+probe timer.s(1) {
+    printf("trace exits: %d times/sec\n", c)
+    c = 0
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\nHit exit to end.\n\n",
+           target())
+}
+

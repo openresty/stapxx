@@ -1,0 +1,60 @@
+#!/usr/bin/env stap++
+
+# check how many times LuaJIT exits a compiled trace every second.
+
+global active_req, req_exits, stats, nreqs
+
+probe @pfunc(ngx_http_lua_run_thread),
+      @pfunc(ngx_http_lua_log_handler),
+      @pfunc(ngx_http_lua_set_by_chunk),
+      @pfunc(ngx_http_lua_header_filter_by_chunk),
+      @pfunc(ngx_http_lua_body_filter_by_chunk)
+{
+    active_req = $r->main
+}
+
+probe @pfunc(ngx_http_free_request)
+{
+    r = $r->main
+    c = req_exits[r]
+    if (c) {
+        nreqs++
+        stats <<< c
+        delete req_exits[r]
+    }
+}
+
+probe process("$^libluajit_path").function("lj_trace_exit") {
+    if (active_req) {
+        req_exits[active_req]++
+    }
+}
+
+probe begin {
+    printf("Start tracing process %d ($^exec_path)...\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)
+
+probe end {
+    count = @count(stats)
+    if (count == 0) {
+        printf("\nNo samples found so far.\n")
+
+    } else {
+        printf("\nDistribution of LuaJIT trace exit times per request for %d sample(s):\n",
+               nreqs)
+        printf("(min/avg/max: %d/%d/%d)\n", @min(stats), @avg(stats),
+               @max(stats))
+        print(@hist_log(stats))
+    }
+}

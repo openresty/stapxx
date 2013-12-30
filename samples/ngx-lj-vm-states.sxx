@@ -3,17 +3,19 @@
 @use nginx.lua
 @use luajit
 
-global states, total
+global states, total, ignored
 
 function process_timer_event()
 {
     mL = ngx_lua_get_main_lua_vm()
     if (mL == 0) {
+        ignored++
         return 0
     }
 
     g = luajit_G(mL)
     if (g == 0) {
+        ignored++
         return 0
     }
 
@@ -26,6 +28,7 @@ function process_timer_event()
     $*L := @cast(L, "lua_State", "$^libluajit_path")
 
     if (L == 0) {
+        ignored++
         return 0
     }
 
@@ -42,7 +45,10 @@ function process_timer_event()
         total++
 
     } else {
-        if (L && $*L->cframe) {
+        if (vmstate == -1 && !$*L->cframe) {
+            ignored++
+
+        } else {
             if (vmstate == -1) {
                 states["I"]++
 
@@ -52,9 +58,13 @@ function process_timer_event()
             } else if (vmstate == -3) {
                 states["G"]++
 
+            } else if (vmstate == -4) {
+                states["E"]++
+
             } else {
                 states["J"]++
             }
+
             total++
         }
     }
@@ -71,7 +81,9 @@ probe timer.profile
 
 function gen_report()
 {
-    printf("\nObserved %d samples.\n", total)
+    printf("\nObserved %d Lua-code-running samples and ignored %d unrelated samples.\n",
+           total, ignored)
+
     foreach (state in states-) {
         if (state == "I") {
             ctx = "Interpreted"
@@ -84,6 +96,9 @@ function gen_report()
 
         } else if (state == "C") {
             ctx = "C Code"
+
+        } else if (state == "E") {
+            ctx = "Trace exiting"
 
         } else {
             ctx = "Garbage Collector"

@@ -512,16 +512,22 @@ We can know how the CPU time is distributed among interpreted Lua code, (JIT) co
 The following LuaJIT VM states are analyzed:
 
 * Interpreted
+
     Running interpreted Lua code
 * Compiled
+
     Running already compiled Lua code (this including running C functions *compiled* by the `FFI` API)
 * C Code (by interpreted Lua)
+
     Running C functions of the form `lua_CFunction` or called by the `FFI` API in the Lua interpreter.
 * Garbage Collector
+
     Doing GC work in the garbage collector (for both compiled code and interpreted code).
 * Trace exiting
+
     Exiting compiled Lua code and falling back to the Lua interpreter.
 * JIT Compiler
+
     Compiling Lua code to native code in the Lua JIT compiler.
 
 For now, this tool only supports LuaJIT v2.1.

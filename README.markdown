@@ -501,6 +501,58 @@ details. But this is usually very expensive to call and it is strongly discourag
 
 [Back to TOC](#table-of-contents)
 
+ngx-lj-vm-states
+----------------
+
+This tool samples the LuaJIT 2.1's VM states in the specified nginx worker process (running the ngx\_lua module) via kernel's timer hooks.
+
+We can know how the CPU time is distributed among interpreted Lua code, (JIT) compiled Lua code, garbage collector, and etc.
+
+The following LuaJIT VM states are analyzed:
+
+* Interpreted
+    Running interpreted Lua code
+* Compiled
+    Running already compiled Lua code (this including running C functions *compiled* by the `FFI` API)
+* C Code (by interpreted Lua)
+    Running C functions of the form `lua_CFunction` or called by the `FFI` API in the Lua interpreter.
+* Garbage Collector
+    Doing GC work in the garbage collector (for both compiled code and interpreted code).
+* Trace exiting
+    Exiting compiled Lua code and falling back to the Lua interpreter.
+* JIT Compiler
+    Compiling Lua code to native code in the Lua JIT compiler.
+
+Below are some examples:
+
+```bash
+$ ngx-lj-vm-states.sxx -x 24405 --arg time=30
+Start tracing 24405 (/opt/nginx/sbin/nginx)
+Please wait for 30 seconds...
+
+Observed 457 Lua-running samples and ignored 0 unrelated samples.
+C Code (by interpreted Lua): 78% (361 samples)
+Interpreted: 14% (65 samples)
+Garbage Collector: 4% (21 samples)
+Compiled: 1% (5 samples)
+JIT Compiler: 1% (5 samples)
+```
+
+In this example, we can see most of the CPU time is spent on interpreted Lua code, which means big room for future speedup via JIT compiling more hot Lua code paths.
+
+```bash
+Start tracing 9087 (/opt/nginx/sbin/nginx)
+Hit Ctrl-C to end.
+^C
+Observed 2082 Lua-running samples and ignored 0 unrelated samples.
+Compiled: 97% (2024 samples)
+Garbage Collector: 2% (56 samples)
+Trace exiting: 0% (1 samples)
+Interpreted: 0% (1 samples)
+```
+
+This example shows that almost all the CPU time is spent on compiled Lua code, which is a very good sign.
+
 epoll-et-lt
 -----------
 

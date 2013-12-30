@@ -1,0 +1,110 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+global states, total
+
+function process_timer_event()
+{
+    mL = ngx_lua_get_main_lua_vm()
+    if (mL == 0) {
+        return 0
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return 0
+    }
+
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    gco = $*g->cur_L->gcptr32
+    $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+
+    L = &$*gco->th
+    $*L := @cast(L, "lua_State", "$^libluajit_path")
+
+    if (L == 0) {
+        return 0
+    }
+
+    /*
+    printf("cur L: %p\n", L)
+    printf("vmstate: %d\n", $*g->vmstate)
+    printf("cframe: %p\n", $*L->cframe)
+    */
+
+    vmstate = $*g->vmstate
+    if (vmstate >= 0) {
+        /* compiled Lua code */
+        states["N"]++
+        total++
+
+    } else {
+        if (L && $*L->cframe) {
+            if (vmstate == -1) {
+                states["I"]++
+
+            } else if (vmstate == -2) {
+                states["C"]++
+
+            } else if (vmstate == -3) {
+                states["G"]++
+
+            } else {
+                states["J"]++
+            }
+            total++
+        }
+    }
+
+    return 1
+}
+
+probe timer.profile
+{
+    if (pid() == target()) {
+        process_timer_event()
+    }
+}
+
+function gen_report()
+{
+    printf("\nObserved %d samples.\n", total)
+    foreach (state in states-) {
+        if (state == "I") {
+            ctx = "Interpreted"
+
+        } else if (state == "N") {
+            ctx = "Compiled"
+
+        } else if (state == "J") {
+            ctx = "JIT Compiler"
+
+        } else if (state == "C") {
+            ctx = "C Code"
+
+        } else {
+            ctx = "Garbage Collector"
+        }
+
+        count = states[state]
+        printf("%s: %d%% (%d samples)\n", ctx, count*100/total, count)
+    }
+}
+
+probe end
+{
+    if (total == 0) {
+        printf("No samples observed.\n")
+
+    } else {
+        gen_report()
+    }
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n\n", target())
+}

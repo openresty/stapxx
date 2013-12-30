@@ -81,7 +81,7 @@ probe timer.profile
 
 function gen_report()
 {
-    printf("\nObserved %d Lua-code-running samples and ignored %d unrelated samples.\n",
+    printf("\nObserved %d Lua-running samples and ignored %d unrelated samples.\n",
            total, ignored)
 
     foreach (state in states-) {
@@ -95,7 +95,7 @@ function gen_report()
             ctx = "JIT Compiler"
 
         } else if (state == "C") {
-            ctx = "C Code"
+            ctx = "C Code (by interpreted Lua)"
 
         } else if (state == "E") {
             ctx = "Trace exiting"
@@ -112,7 +112,7 @@ function gen_report()
 probe end
 {
     if (total == 0) {
-        printf("No samples observed.\n")
+        printf("\nNo Lua-running samples observed.\n")
 
     } else {
         gen_report()
@@ -121,5 +121,16 @@ probe end
 
 probe begin
 {
-    printf("Start tracing %d ($^exec_path)\n\n", target())
+    printf("Start tracing %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
 }
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

@@ -25,6 +25,7 @@ Table of Contents
     * [ctx-switches](#ctx-switches)
     * [ngx-lj-gc](#ngx-lj-gc)
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
+    * [ngx-lj-vm-states](#ngx-lj-vm-states)
     * [epoll-et-lt](#epoll-et-lt)
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
@@ -528,6 +529,9 @@ For now, this tool only supports LuaJIT v2.1.
 Below are some examples:
 
 ```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
 $ ngx-lj-vm-states.sxx -x 24405 --arg time=30
 Start tracing 24405 (/opt/nginx/sbin/nginx)
 Please wait for 30 seconds...
@@ -543,6 +547,7 @@ JIT Compiler: 1% (5 samples)
 In this example, we can see most of the CPU time is spent on interpreted Lua code, which means big room for future speedup via JIT compiling more hot Lua code paths.
 
 ```bash
+$ ngx-lj-vm-states.sxx -x 9087
 Start tracing 9087 (/opt/nginx/sbin/nginx)
 Hit Ctrl-C to end.
 ^C
@@ -554,6 +559,8 @@ Interpreted: 0% (1 samples)
 ```
 
 This example shows that almost all the CPU time is spent on compiled Lua code, which is a very good sign.
+
+[Back to TOC](#table-of-contents)
 
 epoll-et-lt
 -----------

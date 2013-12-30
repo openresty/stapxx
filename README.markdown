@@ -504,7 +504,7 @@ details. But this is usually very expensive to call and it is strongly discourag
 ngx-lj-vm-states
 ----------------
 
-This tool samples the LuaJIT 2.1's VM states in the specified nginx worker process (running the ngx\_lua module) via kernel's timer hooks.
+This tool samples the LuaJIT's VM states in the specified nginx worker process (running the ngx\_lua module) via kernel's timer hooks.
 
 We can know how the CPU time is distributed among interpreted Lua code, (JIT) compiled Lua code, garbage collector, and etc.
 
@@ -522,6 +522,8 @@ The following LuaJIT VM states are analyzed:
     Exiting compiled Lua code and falling back to the Lua interpreter.
 * JIT Compiler
     Compiling Lua code to native code in the Lua JIT compiler.
+
+For now, this tool only supports LuaJIT v2.1.
 
 Below are some examples:
 

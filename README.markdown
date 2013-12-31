@@ -685,6 +685,9 @@ This tool is superior to LuaJIT's builtin low-overhead profiler in that
 1. this tool can be turned on and off more easily on any running (nginx) processes specified by pid. And when this tool is not running, there is strictly zero overhead in the target process.
 1. Bugs in this tool has no impact on the target process, even when reading from bad memory addresses.
 
+Special thanks go to Mike Pall for providing technical support in the
+LuaJIT VM internals.
+
 See also
 
 1. The [ngx-lj-vm-states](#ngx-lj-vm-states) tool for sampling the LuaJIT VM states.

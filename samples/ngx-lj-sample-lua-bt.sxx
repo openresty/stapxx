@@ -1,0 +1,298 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+global bts, cfuncs, jitted
+
+@define sizeof_TValue %( &@cast(0, "TValue", "$^libluajit_path")[1] %)
+@define sizeof_GCproto %( &@cast(0, "GCproto", "$^libluajit_path")[1] %)
+@define sizeof_GCstr %( &@cast(0, "GCstr", "$^libluajit_path")[1] %)
+
+$*L := @cast(L, "lua_State", "$^libluajit_path")
+$*gco := @cast(gco, "GCobj", "$^libluajit_path")
+$*fn := @cast(fn, "GCfunc", "$^libluajit_path");
+$*tvalue := @cast(tvalue, "TValue", "$^libluajit_path")
+
+@define frame_gc(frame) %(
+    @cast(@frame, "TValue", "$^libluajit_path")->fr->func->gcptr32
+%)
+
+@define frame_ftsz(tv) %(
+    @cast(@tv, "TValue", "$^libluajit_path")->fr->tp->ftsz
+%)
+
+@define FRAME_TYPE  %( 3 %)
+@define FRAME_P     %( 4 %)
+@define FRAME_TYPEP %( (@FRAME_TYPE|@FRAME_P) %)
+
+@define frame_type(f) %(
+    (@frame_ftsz(@f) & @FRAME_TYPE)
+%)
+
+@define frame_typep(f) %(
+    (@frame_ftsz(@f) & @FRAME_TYPEP)
+%)
+
+@define FRAME_LUA   %( 0 %)
+
+@define frame_islua(f) %(
+    (@frame_type(@f) == @FRAME_LUA)
+%)
+
+@define frame_pc(tv) %(
+    @cast(@tv, "TValue", "$^libluajit_path")->fr->tp->pcr->ptr32
+%)
+
+@define bc_a(i) %(
+    ((@i >> 8) & 0xff)
+%)
+
+@define frame_prevl(f) %(
+    (@f - (1 + @bc_a(user_uint32(@frame_pc(@f) - 4))) * @sizeof_TValue)
+%)
+
+@define FRAME_VARG  %( 3 %)
+
+@define frame_isvarg(f) %(
+    (@frame_typep(@f) == @FRAME_VARG)
+%)
+
+@define frame_sized(f) %(
+    (@frame_ftsz(@f) & ~@FRAME_TYPEP)
+%)
+
+@define frame_prevd(f) %(
+    (@f - @frame_sized(@f))
+%)
+
+function frame_func(f) {
+    gco = @frame_gc(f)
+    return &$*gco->fn
+}
+
+@define FF_LUA          %( 0 %)
+@define FF_C            %( 1 %)
+
+@define isluafunc(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->c->ffid == @FF_LUA)
+%)
+
+@define isffunc(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->c->ffid > @FF_C)
+%)
+
+@define funcproto(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->l->pc->ptr32 - @sizeof_GCproto)
+%)
+
+function proto_chunkname(pt) {
+    $*pt := @cast(pt, "GCproto", "$^libluajit_path")
+    gco = $*pt->chunkname->gcptr32
+    return &$*gco->str
+}
+
+@define strdata(s) %(
+    (@s + @sizeof_GCstr)
+%)
+
+function lj_debug_dumpstack(L, depth, base)
+{
+    level = 0
+    dir = 1
+    if (depth < 0) {
+        level = ~depth
+        depth = dir = -1
+    }
+    bt = ""
+    while (level != depth) {
+        /* lj_debug_frame(L, level, &size) {{{ */
+        bot = $*L->stack->ptr32
+        found_frame = 0
+        tmp_level = level
+        /* Traverse frames backwards. */
+        for (nextframe = frame = base - @sizeof_TValue; frame > bot; ) {
+            if (@frame_gc(frame) == L) {
+                tmp_level++
+            }
+
+            if (tmp_level-- == 0) {
+                size = (nextframe - frame) / @sizeof_TValue
+                found_frame = 1
+                break
+            }
+            nextframe = frame
+            if (@frame_islua(frame)) {
+                frame = @frame_prevl(frame)
+
+            } else {
+                if (@frame_isvarg(frame)) {
+                    tmp_level++;  /* Skip vararg pseudo-frame. */
+                }
+
+                frame = @frame_prevd(frame);
+            }
+        }
+
+        if (!found_frame) {
+            frame = 0
+            size = tmp_level
+        }
+        /* }}} */
+
+        if (frame) {
+            //nextframe = size ? frame + size * @sizeof_TValue : 0
+            fn = frame_func(frame)
+            if (fn == 0) {
+                return ""
+            }
+            if (@isluafunc(fn)) {
+                pt = @funcproto(fn)
+                firstline = $*pt->firstline
+                name = proto_chunkname(pt)  /* GCstr *name */
+                if (name == 0) {
+                    return ""
+                }
+                $*name := @cast(name, "GCstr", "$^libluajit_path")
+                src = @strdata(name)
+                bt .= sprintf("%s:%d\n", user_string_n_warn(src, $*name->len), firstline)
+
+            } else if (@isffunc(fn)) {
+                bt .= sprintf("builtin#%d\n", $*fn->c->ffid)
+
+            } else {
+                /* C function */
+                cfunc = $*fn->c->f
+                sym = cfuncs[cfunc]
+                if (sym == "") {
+                    sym = sprintf("C:%s\n", usymname(cfunc))
+                    cfuncs[cfunc] = sym
+                }
+                bt .= sym
+            }
+
+        } else if (dir == 1) {
+            break
+
+        } else {
+            level -= size
+        }
+        level += dir
+    }
+
+    return bt
+}
+
+function process_timer_event()
+{
+    mL = ngx_lua_get_main_lua_vm()
+    if (mL == 0) {
+        return 0
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return 0
+    }
+
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+    gco = $*g->cur_L->gcptr32
+    L = &$*gco->th
+    if (L == 0) {
+        return 0
+    }
+
+    /*
+    printf("cur L: %p\n", L)
+    printf("vmstate: %d\n", $*g->vmstate)
+    printf("cframe: %p\n", $*L->cframe)
+    */
+
+    bt = ""
+
+    vmstate = $*g->vmstate
+    if (vmstate >= 0) {
+        /* compiled Lua code */
+
+        /*
+        GG = g - &@cast(0, "GG_State", "$^libluajit_path")->g
+        $*GG := @cast(GG, "GG_State", "$^libluajit_path")
+        J = &$*GG->J
+        $*J := @cast(J, "jit_State", "$^libluajit_path")
+        */
+
+        jitted++
+
+    %( "$^arg_nojit :default()" == ""  %?
+        base = $*g->jit_base->ptr32
+        bt = lj_debug_dumpstack(L, $^arg_depth :default(30), base)
+        /*
+        if (bt != "") {
+            warn(sprintf("JIT backtrace: %s\n", bt))
+        }
+        */
+    %)
+
+    } else {
+
+        if (vmstate == -1 && !$*L->cframe) {
+
+        } else {
+
+        %( "$^arg_nointerp :default()" == ""  %?
+            if (vmstate == -1 || vmstate == -2 || vmstate == -3) {
+                base = $*L->base
+                bt = lj_debug_dumpstack(L, $^arg_depth, base)
+            }
+        %)
+
+        }
+    }
+
+    if (bt != "") {
+        //printf("backtrace: %s\n", bt)
+        bts[bt] <<< 1
+    }
+
+    return 1
+}
+
+probe timer.profile
+{
+    if (pid() == target()) {
+        process_timer_event()
+    }
+}
+
+function output_report() {
+    foreach (bt in bts- limit $^arg_limit :default(1000)) {
+        cnt = @count(bts[bt])
+        if (cnt <= $^arg_min :default(2)) {
+            break
+        }
+        printf("%s\t%d\n", bt, cnt)
+    }
+}
+
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time)
+{
+    warn("Time's up. Quitting now...\n")
+    exit()
+}
+%)
+
+probe end {
+    output_report()
+    warn(sprintf("Found %d JITted samples.\n", jitted))
+}
+
+probe begin
+{
+    warn(sprintf("Start tracing %d ($^exec_path)\n", target()))
+    %( "$^arg_time" != ""  %?
+    warn(sprintf("Please wait for $^arg_time seconds...\n"))
+    %:
+    warn("Hit Ctrl-C to end.\n")
+    %)
+}

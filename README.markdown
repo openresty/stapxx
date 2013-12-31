@@ -649,6 +649,11 @@ You can get much better Lua-land Flame Graphs by filtering the output of this `n
 
 And then feed the `a2.bt` file instead to Brendan Gregg's `stackcollapse-stap.pl` tool and etc to generate the graph.
 
+Below are some real-world sample Flame Graphs on the Lua land:
+
+* http://agentzh.org/misc/flamegraph/lua-on-cpu-local-waf-jitted-only.svg
+* http://agentzh.org/misc/flamegraph/lua-on-cpu-local-waf-interp-only.svg
+
 By default, this tool will sample backtraces of both interpreted Lua code and compiled Lua code at the same time (remember that LuaJIT comes with both a fast interpreter and an awesome JIT compiler?).
 
 You can choose to sample interpreted Lua code only by specifying the `--arg nojit=1` option to ignore backtrace samples for (JIT) compiled Lua code. For instance,

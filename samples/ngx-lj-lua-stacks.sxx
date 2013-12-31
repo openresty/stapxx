@@ -214,18 +214,44 @@ function process_timer_event()
     if (vmstate >= 0) {
         /* compiled Lua code */
 
-        /*
+        jitted++
+
+    %( "$^arg_nojit :default()" == ""  %?
         GG = g - &@cast(0, "GG_State", "$^libluajit_path")->g
         $*GG := @cast(GG, "GG_State", "$^libluajit_path")
         J = &$*GG->J
         $*J := @cast(J, "jit_State", "$^libluajit_path")
-        */
+        if (J == 0) {
+            return 0
+        }
 
-        jitted++
+        T = $*J->trace[vmstate]->gcptr32
+        $*T := @cast(T, "GCtrace", "$^libluajit_path")
+        if (T == 0) {
+            return 0
+        }
 
-    %( "$^arg_nojit :default()" == ""  %?
+        gco = $*T->startpt->gcptr32
+        if (gco == 0) {
+            return 0
+        }
+
+        pt = &$*gco->pt
+
+        firstline = $*pt->firstline
+
+        name = proto_chunkname(pt)  /* GCstr *name */
+        if (name == 0) {
+            return 0
+        }
+        $*name := @cast(name, "GCstr", "$^libluajit_path")
+        src = @strdata(name)
+
+        bt .= sprintf("T:%s:%d\n", user_string_n_warn(src, $*name->len), firstline)
+        #warn(sprintf("bt: %s", bt))
+
         base = $*g->jit_base->ptr32
-        bt = lj_debug_dumpstack(L, $^arg_depth :default(30), base)
+        bt .= lj_debug_dumpstack(L, $^arg_depth :default(30), base)
         /*
         if (bt != "") {
             warn(sprintf("JIT backtrace: %s\n", bt))

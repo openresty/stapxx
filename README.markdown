@@ -641,7 +641,7 @@ This output can be consumed by the [FlameGraphs tool](https://github.com/brendan
 
 The resulting `a.svg` file is an interactive SVG graph that can be displayed in any descent web browser, like Google Chrome:
 
-   $ chrome a.svg
+    $ chrome a.svg
 
 You can get much better Lua-land Flame Graphs by filtering the output of this `ngx-lj-lua-stacks` tool with the [fix-lua-bt](https://github.com/agentzh/nginx-systemtap-toolkit#fix-lua-bt) tool in my [Nginx Systemtap Toolkit](https://github.com/agentzh/nginx-systemtap-toolkit):
 

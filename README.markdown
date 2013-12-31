@@ -26,6 +26,7 @@ Table of Contents
     * [ngx-lj-gc](#ngx-lj-gc)
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
+    * [ngx-lj-lua-stacks](#ngx-lj-lua-stacks)
     * [epoll-et-lt](#epoll-et-lt)
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
@@ -682,6 +683,8 @@ See also
 
 1. The [ngx-lj-vm-states](#ngx-lj-vm-states) tool for sampling the LuaJIT VM states.
 1. Brendan Gregg's article "[Flame Graphs](http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/)".
+
+[Back to TOC](#table-of-contents)
 
 epoll-et-lt
 -----------

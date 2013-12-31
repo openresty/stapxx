@@ -673,7 +673,7 @@ When you're sampling interpreted Lua backtraces, you might see some warnings lik
     WARNING: user string copy fault -14 at 00000000fffb4196
     WARNING: user string copy fault -14 at 0000000004014212
 
-This warnings are normal because our timer callback might run in an arbitrary context of the LuaJIT VM (thanks to the kernel's preemption feature), which means some times the VM might be in an inconsistent state. These read/copy faults will not affect the target (nginx) processes at all because systemtap disables page faults for the userspace. And we should not worry about the accuracy of the sampling results too much unless there are too many such warnings (like hundreds or even thousands). Thanks to the error-tolerance feature of statistics.
+This warnings are normal because our timer callback might run in an arbitrary context of the LuaJIT VM (thanks to the kernel's preemption feature), which means some times the VM might be in an inconsistent state. These read/copy faults will not affect the target (nginx) processes at all because systemtap temporarily disables page faults when reading memory from the userspace. And we should not worry about the accuracy of the sampling results too much unless there are too many such warnings (like hundreds or even thousands). Thanks to the error-tolerance feature of statistics.
 
 When sampling compiled Lua code's backtraces, we should not see these "copy fault" warnings at all because when compiled Lua code is running, the VM state is almost always consistent (because the running traces do not synchronize the VM state until they exit).
 
@@ -683,6 +683,7 @@ This tool is superior to LuaJIT's builtin low-overhead profiler in that
 1. this tool does not affect the LuaJIT VM's interpreter dispatcher nor JIT compiler while LuaJIT's builtin profiler requires a special running mode (and collaborations) for both the interpreter and JIT compiler.
 1. this tool can construct backtraces for JIT compiled code directly while LuaJIT's builtin profiler requires falling back to the interpreter to evaluate the current backtraces.
 1. this tool can be turned on and off more easily on any running (nginx) processes specified by pid. And when this tool is not running, there is strictly zero overhead in the target process.
+1. Bugs in this tool has no impact on the target process, even when reading from bad memory addresses.
 
 See also
 

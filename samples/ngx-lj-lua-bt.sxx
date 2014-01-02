@@ -39,5 +39,5 @@ probe timer.profile
 
 probe begin
 {
-    warn(sprintf("Start tracing %d ($^exec_path)\n", target()))
+    printf("Start tracing %d ($^exec_path)\n", target())
 }

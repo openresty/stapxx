@@ -27,6 +27,7 @@ Table of Contents
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
+    * [ngx-lj-lua-bt](#ngx-lj-lua-bt)
     * [ngx-lj-lua-stacks](#ngx-lj-lua-stacks)
     * [epoll-et-lt](#epoll-et-lt)
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
@@ -666,6 +667,8 @@ Function frames like `builtin#82` means Lua builtin functions and the number `82
     FastFunc string.dump
 
 Which means the ID 82 corresponds to the "string.dump" builtin. The IDs of builtins might be different among different versions of LuaJIT, so ensure you are using the same LuaJIT to run this Lua script.
+
+[Back to TOC](#table-of-contents)
 
 ngx-lj-lua-stacks
 -----------------

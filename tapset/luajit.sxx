@@ -461,7 +461,7 @@ function luajit_debug_framepc(L, T, fn, pt, nextframe) {
     pos = @proto_bcpos(pt, ins) - 1;
     sizebc = $*pt->sizebc
     if (pos > sizebc) {
-        printf("Undo the effects of lj_trace_exit for JLOOP.\n")
+        //printf("Undo the effects of lj_trace_exit for JLOOP.\n")
         if (!T) {
             T = ins - 1 * @sizeof_BCIns - &@cast(0, "GCtrace", "$^libluajit_path")->startins;
         }

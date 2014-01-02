@@ -1,6 +1,9 @@
 // module luajit
 
 
+$*pt := @cast(pt, "GCproto", "$^libluajit_path")
+
+
 //@define LJ_TLIGHTUD  %( 4294967292 %)
 @define LJ_TLIGHTUD  %( 4294901760 %)
 @define LJ_TSTR  %( 4294967291 %)
@@ -26,9 +29,12 @@
 @define FF_C   %( 1 %)
 
 @define FRAME_LUA   %( 0 %)
+@define FRAME_CONT  %( 2 %)
 @define FRAME_TYPE  %( 3 %)
 @define FRAME_P     %( 4 %)
 @define FRAME_TYPEP %( (@FRAME_TYPE|@FRAME_P) %)
+
+@define NO_BCPOS    %( ~0 %)
 
 @define sizeof_GCtab  %( &@cast(0, "GCtab", "$^libluajit_path")[1] %)
 @define sizeof_TValue  %( &@cast(0, "TValue", "$^libluajit_path")[1] %)
@@ -51,6 +57,7 @@
 @define sizeof_K64Array %( &@cast(0, "K64Array", "$^libluajit_path")[1] %)
 @define sizeof_ptr %( &@cast(0, "global_State", "$^libluajit_path")->strmask %)
 @define sizeof_GCcdataVar %( &@cast(0, "GCcdataVar", "$^libluajit_path")[1] %)
+@define sizeof_BCIns %( &@cast(0, "BCIns", "$^libluajit_path")[1] %)
 
 @define strdata(s) %(
     (@s + @sizeof_GCstr)
@@ -76,8 +83,16 @@
     (@frame_type(@f) == @FRAME_LUA)
 %)
 
+@define frame_iscont(f) %(
+    (@frame_typep(@f) == @FRAME_CONT)
+%)
+
 @define frame_pc(tv) %(
     @cast(@tv, "TValue", "$^libluajit_path")->fr->tp->pcr->ptr32
+%)
+
+@define frame_contpc(f) %(
+    (@frame_pc(@f) - 1 * @sizeof_BCIns)
 %)
 
 @define bc_a(i) %(
@@ -112,6 +127,18 @@
 
 @define funcproto(fn) %(
     (@cast(@fn, "GCfunc", "$^libluajit_path")->l->pc->ptr32 - @sizeof_GCproto)
+%)
+
+@define proto_bc(pt) %(
+    (@pt + @sizeof_GCproto)
+%)
+
+@define proto_bcpos(pt, pc) %(
+    ((@pc - @proto_bc(@pt)) / @sizeof_BCIns)
+%)
+
+@define proto_lineinfo(pt) %(
+    @cast(@pt, "GCproto", "$^libluajit_path")->lineinfo->ptr32
 %)
 
 
@@ -407,13 +434,92 @@ function luajit_touserdata(L, idx)
 
 
 function luajit_proto_chunkname(pt) {
-    $*pt := @cast(pt, "GCproto", "$^libluajit_path")
     gco = $*pt->chunkname->gcptr32
     return &$*gco->str
 }
 
 
-function luajit_debug_dumpstack(L, depth, base)
+function luajit_debug_framepc(L, T, fn, pt, nextframe) {
+    //printf("debug framepc: L=%p, fn=%p, nextframe = %p\\n", L, fn, nextframe)
+    if (nextframe == 0) {
+        return @NO_BCPOS
+    }
+
+    if (@frame_islua(nextframe)) {
+        ins = @frame_pc(nextframe);
+        //printf("frame is lua, ins = %p\\n", ins)
+
+    } else if (@frame_iscont(nextframe)) {
+        //println("frame is cont")
+        ins = @frame_contpc(nextframe)
+
+    } else {
+        /* TODO: add support for cframe */
+    }
+
+    //printf("debug framepc: ins = %p\\n", ins)
+    pos = @proto_bcpos(pt, ins) - 1;
+    sizebc = $*pt->sizebc
+    if (pos > sizebc) {
+        printf("Undo the effects of lj_trace_exit for JLOOP.\n")
+        if (!T) {
+            T = ins - 1 * @sizeof_BCIns - &@cast(0, "GCtrace", "$^libluajit_path")->startins;
+        }
+        //printf("startpc: %d\n", $*T->startpc->ptr32)
+        pos = @proto_bcpos(pt, $*T->startpc->ptr32);
+        //printf("Found adjusted position: %d\n", pos)
+    }
+    return pos;
+}
+
+
+function luajit_debug_line(pt, pc)
+{
+    lineinfo = @proto_lineinfo(pt)
+    //printf("lj_debug_line: lineinfo = %p, %x <= %x\\n", lineinfo,
+           //pc, $pt->sizebc)
+    sizebc = $*pt->sizebc
+
+    if (pc <= sizebc && lineinfo) {
+        first = $*pt->firstline
+
+        if (pc == sizebc) {
+            return first + $*pt->numline
+        }
+
+        if (pc-- == 0) {
+            return first
+        }
+
+        if ($*pt->numline < 256) {
+            return first + @cast(lineinfo, "uint8_t", "$^libluajit_path")[pc]
+        }
+
+        if ($*pt->numline < 65536) {
+            return first + @cast(lineinfo, "uint16_t", "$^libluajit_path")[pc]
+        }
+
+        return first + @cast(lineinfo, "uint32_t", "$^libluajit_path")[pc]
+    }
+
+    return -1
+}
+
+
+function luajit_debug_frameline(L, T, fn, pt, nextframe)
+{
+    pc = luajit_debug_framepc(L, T, fn, pt, nextframe)
+    if (pc != @NO_BCPOS) {
+        if (pc <= $*pt->sizebc) {
+            return luajit_debug_line(pt, pc)
+        }
+    }
+
+    return -1
+}
+
+
+function luajit_debug_dumpstack(L, T, depth, base, simple)
 {
     level = 0
     dir = 1
@@ -465,13 +571,28 @@ function luajit_debug_dumpstack(L, depth, base)
             }
             if (@isluafunc(fn)) {
                 pt = @funcproto(fn)
-                firstline = $*pt->firstline
+
+                if (simple) {
+                    line = $*pt->firstline
+
+                } else {
+                    line = luajit_debug_frameline(L, T, fn, pt, nextframe)
+                    if (line < 0) {
+                        line = $*pt->firstline
+                        //printf("using firstline %d\n", line)
+
+                    } else {
+                        //printf("GOT the lineno %d\n", line)
+                    }
+                }
+
                 name = luajit_proto_chunkname(pt)  /* GCstr *name */
                 if (name == 0) {
                     return ""
                 }
+
                 path = luajit_unbox_gcstr(name)
-                bt .= sprintf("%s:%d\n", path, firstline)
+                bt .= sprintf("%s:%d\n", path, line)
 
             } else if (@isffunc(fn)) {
                 bt .= sprintf("builtin#%d\n", $*fn->c->ffid)
@@ -545,7 +666,7 @@ function luajit_trace_starting_func(g, trace)
 }
 
 
-function luajit_simple_backtrace(L, g)
+function luajit_backtrace(L, g, simple)
 {
     bt = ""
 
@@ -553,12 +674,18 @@ function luajit_simple_backtrace(L, g)
     if (vmstate >= 0) {
         /* compiled Lua code */
 
-        trace = luajit_get_trace(g, vmstate)
-        if (trace) {
-            func = luajit_trace_starting_func(g, trace)
-            if (func != "") {
-                bt .= sprintf("T:%s\n", func)
+        T = luajit_get_trace(g, vmstate)
+        if (T) {
+            if (simple) {
+                func = luajit_trace_starting_func(g, T)
+                if (func != "") {
+                    bt .= sprintf("T:%s\n", func)
+                }
+
+            } else {
+                //printf("start pc: %d\n", $*T->startpc->ptr32)
             }
+
             #warn(sprintf("bt: %s", bt))
         }
 
@@ -567,7 +694,7 @@ function luajit_simple_backtrace(L, g)
             return bt
         }
 
-        bt .= luajit_debug_dumpstack(L, $^arg_depth :default(30), base)
+        bt .= luajit_debug_dumpstack(L, T, $^arg_depth :default(30), base, simple)
         /*
         if (bt != "") {
             warn(sprintf("JIT backtrace: %s\n", bt))
@@ -582,7 +709,7 @@ function luajit_simple_backtrace(L, g)
 
         if (vmstate == -1 || vmstate == -2 || vmstate == -3) {
             base = $*L->base
-            bt .= luajit_debug_dumpstack(L, $^arg_depth, base)
+            bt .= luajit_debug_dumpstack(L, 0, $^arg_depth, base, simple)
         }
     }
 

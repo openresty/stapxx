@@ -7,8 +7,8 @@ global bts, jitted
 
 function process_timer_event()
 {
-    if (@defined(@var("globalL@luajit.c", "$^exec_path"))) {
-        mL = @var("globalL@luajit.c", "$^exec_path")
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
 
     } else {
         mL = ngx_lua_get_main_lua_vm()

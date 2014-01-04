@@ -4,7 +4,13 @@
 @use luajit
 
 function process() {
-    mL = ngx_lua_get_main_lua_vm()
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
     if (mL == 0) {
         return 0
     }

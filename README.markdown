@@ -366,8 +366,15 @@ For now, it just prints out the total memory currently allocated in the LuaJIT G
 ngx-lj-gc-objs
 --------------
 
-This tool dumps the GC objects' memory usage stats in any specified running Nginx worker process
+This tool has been renamed to [lj-vm-states](#lj-gc-objs) because it is no longer specific to Nginx.
+
+lj-gc-objs
+----------
+
+This tool dumps the GC objects' memory usage stats in any specified `luajit` utility program's process or any specified running Nginx worker process
 according to the GC object's types.
+
+Other custom C processes with LuaJIT embedded can also be analyzed by this tool as long as the target C program saves the main Lua VM state (lua_State) pointer in a global C variable named `globalL`, just as in the standard `luajit` command-line utility program.
 
 This tool reveals exactly how the memory is distributed among all Lua value types, which is useful for optimizing Lua code's memory usage and debugging memory leak issues in the Lua programs.
 
@@ -379,7 +386,7 @@ Here is an example.
     $ export PATH=$PWD:$PATH
 
     # assuming the nginx worker pid is 5686:
-    $ ./samples/ngx-lj-gc-objs.sxx -x 5686
+    $ ./samples/lj-gc-objs.sxx -x 5686
     Start tracing 5686 (/opt/nginx/sbin/nginx)
 
     main machine code area size: 65536 bytes
@@ -405,7 +412,7 @@ Here is an example.
 
 For LuaJIT instances with big memory usage, you need to increase the `MAXACTION` threshold, as in
 
-    $ ./samples/ngx-lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
+    $ ./samples/lj-gc-objs.sxx -x 14378 -D MAXACTION=200000
     Start tracing 14378 (/opt/nginx/sbin/nginx)
 
     main machine code area size: 65536 bytes
@@ -434,7 +441,7 @@ collection (GC).
 
 Primitive Lua values like numbers, booleans, nils, and light user data
 do not participate in GC, so we shall never see them listed in the
-output of the ngx-lj-gc-objs tool.
+output of the `lj-gc-objs` tool.
 
 Another interesting exception is empty Lua strings, they are specially
 handled by LuaJIT and they never appear in the output either.
@@ -494,8 +501,8 @@ in your already bloated Nginx worker processes. It is not really designed for de
 individual requests due to the non-determinism of the GC on micro
 levels. You should load your nginx workers by tools like ab and
 weighttp or just trace workers in production, so as to make your nginx worker eat up a _lot_ of memory. The
-more, the merrier. After that, run ngx-lj-gc-objs on your largest
-nginx worker process.
+more, the merrier. After that, run `lj-gc-objs` on your largest
+`luajit` process or `nginx` worker process.
 
 To debug individual requests, you *can* force the LuaJIT GC to free all the unsed objects at once by calling
 

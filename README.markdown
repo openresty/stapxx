@@ -29,6 +29,7 @@ Table of Contents
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
     * [ngx-lj-lua-bt](#ngx-lj-lua-bt)
     * [ngx-lj-lua-stacks](#ngx-lj-lua-stacks)
+    * [lj-lua-stacks](#lj-lua-stacks)
     * [epoll-et-lt](#epoll-et-lt)
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
@@ -673,9 +674,18 @@ Which means the ID 82 corresponds to the "string.dump" builtin. The IDs of built
 ngx-lj-lua-stacks
 -----------------
 
-This tool samples Lua backtraces in the running LuaJIT 2.1 VM of the specified nginx worker process (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module). The timer hook API of the Linux kernel is used for relatively even sampling according to the CPU time usage.
+This tool has been renamed to [lj-lua-stacks](#lj-lua-stacks) because it is no longer specific to Nginx.
+
+[Back to TOC](#table-of-contents)
+
+lj-lua-stacks
+-------------
+
+This tool samples Lua backtraces in the running LuaJIT 2.1 VM of the specified `luajit` process or `nginx` worker process (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module). The timer hook API of the Linux kernel is used for relatively even sampling according to the CPU time usage.
 
 It aggregates idential Lua backtraces during the sampling process so the final output data will not be very big.
+
+Other custom C processes with LuaJIT embedded can also be analyzed by this tool as long as the target C program saves the main Lua VM state (lua_State) pointer in a global C variable named `globalL`, just as in the standard `luajit` command-line utility program.
 
 Below is some examples:
 

@@ -28,6 +28,7 @@ Table of Contents
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
     * [ngx-lj-lua-bt](#ngx-lj-lua-bt)
+    * [lj-lua-bt](#lj-lua-bt)
     * [ngx-lj-lua-stacks](#ngx-lj-lua-stacks)
     * [lj-lua-stacks](#lj-lua-stacks)
     * [epoll-et-lt](#epoll-et-lt)
@@ -629,8 +630,17 @@ we can see that almost all the requests used compiled traces, which is great! An
 ngx-lj-lua-bt
 -------------
 
-This tool dumps out the current Lua backtrace in the running LuaJIT 2.1 VM of the specified Nginx worker process
+This tool has been renamed to [lj-lua-bt](#lj-lua-bt) because it is no longer specific to Nginx.
+
+[Back to TOC](#table-of-contents)
+
+lj-lua-bt
+-------------
+
+This tool dumps out the current Lua backtrace in the running LuaJIT 2.1 VM in the specified "luajit" utility program or the specified nginx worker process
 (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module enabled).
+
+Other custom C processes with LuaJIT embedded can also be analyzed by this tool as long as the target C program saves the main Lua VM state (lua_State) pointer in a global C variable named `globalL`, just as in the standard `luajit` command-line utility program.
 
 This tool uses the kernel timer hook to preempt into the target nginx process. So even if the Lua code is in a tight loop or the C code called by some Lua code is spinning, we can get a proper Lua backtrace. But when the process is simply blocking on some system calls without consuming any CPU time at all, then this tool will just hang and keep waiting.
 
@@ -735,7 +745,7 @@ Below is an example:
     access_by_lua:1
             52
 
-Each backtrace above follows the same format as in the output of the [ngx-lj-lua-bt](#ngx-lj-lua-bt) tool. The only difference is that the line numbers are always for the first source lines of the Lua functions.
+Each backtrace above follows the same format as in the output of the [lj-lua-bt](#lj-lua-bt) tool. The only difference is that the line numbers are always for the first source lines of the Lua functions.
 
 This output can be consumed by the [FlameGraphs tool](https://github.com/brendangregg/FlameGraph) (created by Brenden Gregg) to generate Lua-land Flame Graphs for performance analysis. For example,
 

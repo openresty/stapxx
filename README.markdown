@@ -24,7 +24,9 @@ Table of Contents
     * [ngx-req-latency-distr](#ngx-req-latency-distr)
     * [ctx-switches](#ctx-switches)
     * [ngx-lj-gc](#ngx-lj-gc)
+    * [lj-gc](#lj-gc)
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
+    * [lj-gc-objs](#lj-gc-objs)
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
     * [lj-vm-states](#lj-vm-states)
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
@@ -349,7 +351,16 @@ we could keep the context switching rate low.
 ngx-lj-gc
 ---------
 
-This tool analyses the LuaJIT 2.0/2.1 GC in the specified Nginx worker process via the [ngx_lua](http://wiki.nginx.org/HttpLuaModule) mdoule.
+This tool has been renamed to [lj-gc](#lj-gc) because it is no longer specific to Nginx.
+
+[Back to TOC](#table-of-contents)
+
+lj-gc
+-----
+
+This tool analyses the LuaJIT 2.0/2.1 GC in the specified "luajit" utility program's process or the specified Nginx worker process via the [ngx_lua](http://wiki.nginx.org/HttpLuaModule) mdoule.
+
+Other custom C processes with LuaJIT embedded can also be analyzed by this tool as long as the target C program saves the main Lua VM state (lua_State) pointer in a global C variable named `globalL`, just as in the standard `luajit` command-line utility program.
 
 For now, it just prints out the total memory currently allocated in the LuaJIT GC. For example,
 
@@ -357,7 +368,7 @@ For now, it just prints out the total memory currently allocated in the LuaJIT G
     $ export PATH=$PWD:$PATH
 
     # assuming the nginx worker process's pid is 4771:
-    $ ./samples/ngx-lj-gc.sxx -x 4771
+    $ ./samples/lj-gc.sxx -x 4771
     Start tracing 4771 (/opt/nginx/sbin/nginx)
     Total GC count: 258618 bytes
 
@@ -367,6 +378,8 @@ ngx-lj-gc-objs
 --------------
 
 This tool has been renamed to [lj-vm-states](#lj-gc-objs) because it is no longer specific to Nginx.
+
+[Back to TOC](#table-of-contents)
 
 lj-gc-objs
 ----------

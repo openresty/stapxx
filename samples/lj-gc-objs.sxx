@@ -34,8 +34,7 @@ global typenames
 global gcstates
 global gcobjs
 
-//probe @pfunc(process)
-probe @pfunc(ngx_process_events_and_timers)!, timer.profile
+probe @pfunc(ngx_process_events_and_timers)?, timer.profile
 {
     if (pid() == target()) {
         if (@defined(@var("globalL", "$^exec_path"))) {
@@ -43,6 +42,11 @@ probe @pfunc(ngx_process_events_and_timers)!, timer.profile
 
         } else {
             L = ngx_lua_get_main_lua_vm()
+        }
+
+        if (L == 0) {
+            printf("Failed to get the main Lua VM\n")
+            exit()
         }
 
         process(L)

@@ -35,14 +35,24 @@ global gcstates
 global gcobjs
 
 //probe @pfunc(process)
-probe @pfunc(ngx_process_events_and_timers)
+probe @pfunc(ngx_process_events_and_timers)!, timer.profile
+{
+    if (pid() == target()) {
+        if (@defined(@var("globalL", "$^exec_path"))) {
+            L = @var("globalL", "$^exec_path")
+
+        } else {
+            L = ngx_lua_get_main_lua_vm()
+        }
+
+        process(L)
+    }
+}
+
+function process(L)
 {
     begin = gettimeofday_us()
 
-    //L = @var("L")
-    L = ngx_lua_get_main_lua_vm()
-
-    //printf("L = %p\n", L)
     g = luajit_G(L)
     $*g := @cast(g, "global_State", "$^libluajit_path")
 

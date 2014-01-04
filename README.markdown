@@ -26,6 +26,7 @@ Table of Contents
     * [ngx-lj-gc](#ngx-lj-gc)
     * [ngx-lj-gc-objs](#ngx-lj-gc-objs)
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
+    * [lj-vm-states](#lj-vm-states)
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
     * [ngx-lj-lua-bt](#ngx-lj-lua-bt)
     * [lj-lua-bt](#lj-lua-bt)
@@ -510,7 +511,16 @@ details. But this is usually very expensive to call and it is strongly discourag
 ngx-lj-vm-states
 ----------------
 
-This tool samples the LuaJIT's VM states in the specified nginx worker process (running the ngx\_lua module) via kernel's timer hooks.
+This tool has been renamed to [lj-vm-states](#lj-vm-states) because it is no longer specific to Nginx.
+
+[Back to TOC](#table-of-contents)
+
+lj-vm-states
+----------------
+
+This tool samples the LuaJIT's VM states in the specified `luajit` utility program or the specified nginx worker process (running the ngx_lua module) via kernel's timer hooks.
+
+Other custom C processes with LuaJIT embedded can also be analyzed by this tool as long as the target C program saves the main Lua VM state (lua_State) pointer in a global C variable named `globalL`, just as in the standard `luajit` command-line utility program.
 
 We can know how the CPU time is distributed among interpreted Lua code, (JIT) compiled Lua code, garbage collector, and etc.
 
@@ -543,7 +553,7 @@ Below are some examples:
 # making the ./stap++ tool visible in PATH:
 $ export PATH=$PWD:$PATH
 
-$ ngx-lj-vm-states.sxx -x 24405 --arg time=30
+$ lj-vm-states.sxx -x 24405 --arg time=30
 Start tracing 24405 (/opt/nginx/sbin/nginx)
 Please wait for 30 seconds...
 
@@ -558,7 +568,7 @@ JIT Compiler: 1% (5 samples)
 In this example, we can see most of the CPU time is spent on interpreted Lua code, which means big room for future speedup via JIT compiling more hot Lua code paths.
 
 ```bash
-$ ngx-lj-vm-states.sxx -x 9087
+$ lj-vm-states.sxx -x 9087
 Start tracing 9087 (/opt/nginx/sbin/nginx)
 Hit Ctrl-C to end.
 ^C
@@ -654,7 +664,7 @@ Below is an example,
     $ export PATH=$PWD:$PATH
 
     # assuming the nginx worker process pid is 22544:
-    $ ./samples/ngx-lj-lua-bt.sxx --skip-badvars -x 22544
+    $ ./samples/lj-lua-bt.sxx --skip-badvars -x 22544
     Start tracing 22544 (/opt/nginx/sbin/nginx)
     @/home/agentzh/git/cf/nginx-waf/gen/lua/waf-core.lua:1283
     /waf/rulesets/lua/modsecurity_setup.lua:66
@@ -703,14 +713,14 @@ Below is some examples:
     $ export PATH=$PWD:$PATH
 
     # assuming the nginx worker process pid is 6949:
-    $ ./samples/ngx-lj-lua-stacks.sxx --skip-badvars -x 6949 > a.bt
+    $ ./samples/lj-lua-stacks.sxx --skip-badvars -x 6949 > a.bt
     Start tracing 6949 (/opt/nginx/sbin/nginx)
     Hit Ctrl-C to end.
     ^C
 
 By default, the tool will just keep sampling until you hit `Ctrl-C`. You can also specify the `--arg time=N` option to let the tool exit automatically after `N` seconds. For example,
 
-    $ ./samples/ngx-lj-lua-stacks.sxx --arg time=5 \
+    $ ./samples/lj-lua-stacks.sxx --arg time=5 \
                 --skip-badvars -x 6949 > a.bt
     Start tracing 6949 (/opt/nginx/sbin/nginx)
     Please wait for 5 seconds
@@ -761,7 +771,7 @@ The resulting `a.svg` file is an interactive SVG graph that can be displayed in 
 
     $ chrome a.svg
 
-You can get much better Lua-land Flame Graphs by filtering the output of this `ngx-lj-lua-stacks` tool with the [fix-lua-bt](https://github.com/agentzh/nginx-systemtap-toolkit#fix-lua-bt) tool in my [Nginx Systemtap Toolkit](https://github.com/agentzh/nginx-systemtap-toolkit):
+You can get much better Lua-land Flame Graphs by filtering the output of this `lj-lua-stacks` tool with the [fix-lua-bt](https://github.com/agentzh/nginx-systemtap-toolkit#fix-lua-bt) tool in my [Nginx Systemtap Toolkit](https://github.com/agentzh/nginx-systemtap-toolkit):
 
     $ fix-lua-bt a.bt > a2.bt
 
@@ -777,12 +787,12 @@ By default, this tool will sample backtraces of both interpreted Lua code and co
 You can choose to sample interpreted Lua code only by specifying the `--arg nojit=1` option to ignore backtrace samples for (JIT) compiled Lua code. For instance,
 
 
-    $ ./samples/ngx-lj-lua-stacks.sxx --arg nojit=1 \
+    $ ./samples/lj-lua-stacks.sxx --arg nojit=1 \
             --arg time=5 --skip-badvars -x $pid > a.bt
 
 Similarly, you can choose to see samples for JIT compiled Lua code only by specifying the `--arg nointerp=1` option to ignore samples for interpreted code. For example,
 
-    $ ./samples/ngx-lj-lua-stacks.sxx --arg nointerp=1 \
+    $ ./samples/lj-lua-stacks.sxx --arg nointerp=1 \
             --arg time=5 --skip-badvars -x $pid > a.bt
 
 When you're sampling interpreted Lua backtraces, you might see some warnings like below when this tool is running:
@@ -808,7 +818,7 @@ LuaJIT VM internals.
 
 See also
 
-1. The [ngx-lj-vm-states](#ngx-lj-vm-states) tool for sampling the LuaJIT VM states.
+1. The [lj-vm-states](#lj-vm-states) tool for sampling the LuaJIT VM states.
 1. Brendan Gregg's article "[Flame Graphs](http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/)".
 
 [Back to TOC](#table-of-contents)

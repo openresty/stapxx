@@ -785,8 +785,6 @@ This output can be consumed by the [FlameGraphs tool](https://github.com/brendan
                   --title="Lua-land on-CPU flamegraph" \
                   a.cbt > a.svg
 
-(For now, please use [my fork](https://github.com/agentzh/FlameGraph) of the FlameGraph project.)
-
 The resulting `a.svg` file is an interactive SVG graph that can be displayed in any descent web browser, like Google Chrome:
 
     $ chrome a.svg

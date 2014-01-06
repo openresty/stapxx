@@ -721,3 +721,51 @@ function luajit_vm_state(g)
 {
     return $*g->vmstate
 }
+
+
+function luajit_find_gcstr(g, str)
+{
+    len = strlen(str)
+    strmask = $*g->strmask
+    strnum = $*g->strnum
+    strhash = $*g->strhash
+    $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
+    ret = 0
+
+    n = 0
+    done = 0
+    for (i = 0; i <= strmask; i++) {
+        p = &$*strhash[i]
+
+        while (p) {
+            o = luajit_gcref(p)
+            if (o == 0) {
+                break
+            }
+
+            $*o := @cast(o, "GCobj", "$^libluajit_path")
+            if ($*o->str->len == len) {
+                gcs = &$*o->str
+                s = luajit_unbox_gcstr(gcs)
+                if (s == str) {
+                    done = 1
+                    ret = gcs
+                    break
+                }
+            }
+
+            if (++n == strnum) {
+                done = 1
+                break
+            }
+
+            p = &$*o->gch->nextgc
+        }
+
+        if (done) {
+            break
+        }
+    }
+
+    return ret
+}

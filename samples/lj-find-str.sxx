@@ -1,0 +1,46 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+function process() {
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
+    if (mL == 0) {
+        return 0
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return 0
+    }
+
+    gcs = luajit_find_gcstr(g, "$^arg_str")
+    if (gcs) {
+        printf("Found: (GCstr*)%p\n", gcs)
+
+    } else {
+        printf("Not found.\n")
+    }
+
+    return 1
+}
+
+probe @pfunc(ngx_process_events_and_timers)?, timer.profile
+{
+    if (pid() == target()) {
+        if (process()) {
+            exit()
+        }
+    }
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n", target())
+}

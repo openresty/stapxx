@@ -126,7 +126,7 @@ if (defined $pid) {
         or die "Cannot open $maps_file for reading: $!\n";
 
     while (<$in>) {
-        if (m{\S+\blib\w+[^/\s]*?\.so(?:\.\d+)*$}) {
+        if (m{\S+\blib\w+[^/\s]*?\S+\.so(?:\.\d+)*$}) {
             my $path = $&;
             $DSOs{$path} = 1;
             #warn "seeing $path";
@@ -302,7 +302,8 @@ sub eval_std_var {
 
 sub find_dso_path {
     my $pat = shift;
-
+    my $pat2;
+	
     my $path = $LibPaths{$pat};
     if ($path) {
         return $path;
@@ -320,8 +321,20 @@ sub find_dso_path {
             $LibPaths{$pat} = $path;
             $found_path = $path;
         }
+        if (!$found_path && ($pat =~ m{^lib(\w+)$})) {
+            $pat2 = $1;
+            #warn "checking $path against $pat2";
+            if ($path =~ m{\b\Q$pat2\E[^/\s]*?\.so(?:\.\d+)*$}) {
+                if ($found_path) {
+                    warn "Ignored ambiguous library $path for \"$pat\"\n";
+                    next;
+                }
+                $LibPaths{$pat2} = $path;
+                $found_path = $path;
+            }
+        }
     }
-
+    
     return $found_path;
 }
 

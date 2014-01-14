@@ -23,9 +23,26 @@ function sockfd_lookup(fd)
 }
 
 
-function socket_tcp_state(socket)
+function socket_unix_stream_file_name(socket)
 {
     $*socket := @cast(socket, "struct socket", "kernel")
+    //printf("ops = %p\n", $*socket->ops)
+    //printf("&unix_stream_ops = %p\n", &@var("unix_stream_ops@af_unix.c", "kernel"))
+    if ($*socket->ops == &@var("unix_stream_ops@af_unix.c", "kernel")) {
+        u = $*socket->sk
+        $*u := @cast(u, "struct unix_sock", "kernel")
+        //printf("MATCH! %s\n", kernel_string($*u->path->dentry->d_iname))
+        if ($*u->path->dentry) {
+            return kernel_string($*u->path->dentry->d_iname)
+        }
+    }
+
+    return ""
+}
+
+
+function socket_tcp_state(socket)
+{
     state = $*socket->sk->__sk_common->skc_state
     return tcp_sockstate_str(state)
 }

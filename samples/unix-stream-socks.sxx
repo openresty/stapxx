@@ -1,0 +1,33 @@
+#!/usr/bin/env stap++
+
+@use kernel.socket
+
+global count
+
+probe syscall.$^arg_call :default(recvfrom).return {
+    if (pid() == target()) {
+        socket = sockfd_lookup($fd)
+        if (socket_unix_stream_file_name(socket) == "$^arg_file") {
+            ret = $return
+            count++
+
+%( "$^arg_ret :default()" != ""  %?
+            if (ret == $^arg_ret) {
+                printf("$^arg_call returns %d\n", ret)
+            }
+%:
+            if (ret <= 0) {
+                printf("$^arg_call returns %d\n", ret)
+            }
+%)
+        }
+    }
+}
+
+probe begin {
+    printf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target())
+}
+
+probe end {
+    printf("Found %d hit(s).\n", count)
+}

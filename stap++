@@ -126,7 +126,7 @@ if (defined $pid) {
         or die "Cannot open $maps_file for reading: $!\n";
 
     while (<$in>) {
-        if (m{\S+\blib\w+[^/\s]*?\.so(?:\.\d+)*$}) {
+        if (m{\S+\.so(?:\.\d+)*$}) {
             my $path = $&;
             $DSOs{$path} = 1;
             #warn "seeing $path";
@@ -165,7 +165,7 @@ if (defined $master_pid) {
         or die "Cannot open $maps_file for reading: $!\n";
 
     while (<$in>) {
-        if (m{\S+\blib\w+[^/\s]*?\.so(?:\.\d+)*$}) {
+        if (m{\S+\.so(?:\.\d+)*$}) {
             my $path = $&;
             $DSOs{$path} = 1;
             #warn "seeing $path";
@@ -308,10 +308,17 @@ sub find_dso_path {
         return $path;
     }
 
+    my $name;
+    if ($pat !~ /^lib(\S+)/) {
+        die "bad pattern: $pat";
+    }
+
+    $name = $1;
+
     my $found_path;
     for my $path (sort keys %DSOs) {
         #warn "checking $path against $pat";
-        if ($path =~ m{\b\Q$pat\E[^/\s]*?\.so(?:\.\d+)*$}) {
+        if ($path =~ m{\b(?:lib)?\Q$name\E[^/\s]*?\.so(?:\.\d+)*$}) {
             if ($found_path) {
                 warn "Ignored ambiguous library $path for \"$pat\"\n";
                 next;

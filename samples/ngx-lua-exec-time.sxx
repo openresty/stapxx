@@ -58,7 +58,13 @@ probe @pfunc(ngx_http_free_request)
     r = $r
     elapsed = exec_elapsed[r]
     if (elapsed) {
+%( "$^arg_max :default()" != ""  %?
+        if (elapsed <= $^arg_max) {
+            stats <<< elapsed
+        }
+%:
         stats <<< elapsed
+%)
     }
     delete exec_elapsed[r]
     delete active_reqs[r]

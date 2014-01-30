@@ -7,7 +7,7 @@ global count
 
 probe @pfunc(ngx_http_log_request)
 {
-    if (pid() == target() && $r == $r->main) {
+    if ($^pid_ok && $r == $r->main) {
         count++
     }
 }

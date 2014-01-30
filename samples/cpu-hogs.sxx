@@ -1,0 +1,36 @@
+#!/usr/bin/env stap++
+
+global stats, total
+
+probe timer.profile {
+    total++
+    stats[execname()] <<< 1
+}
+
+probe begin {
+    printf("Tracing the whole system...\n")
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+probe end {
+    if (!total) {
+        printf("\nNo samples found so far.\n")
+
+    } else {
+        printf("\n")
+        foreach (name in stats- limit 20) {
+            printf("%s %d%%\n", name, @count(stats[name]) * 100 / total)
+        }
+    }
+}
+
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

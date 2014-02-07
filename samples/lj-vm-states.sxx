@@ -62,7 +62,12 @@ function process_timer_event()
                 states["C"]++
 
             } else if (vmstate == -3) {
-                states["G"]++
+                if ($*g->jit_base->ptr32) {
+                    states["NG"]++
+
+                } else {
+                    states["G"]++
+                }
 
             } else if (vmstate == -4) {
                 states["E"]++
@@ -106,8 +111,12 @@ function gen_report()
         } else if (state == "E") {
             ctx = "Trace exiting"
 
+        } else if (state == "NG") {
+            ctx = "Garbage Collector (compiled)"
+
         } else {
-            ctx = "Garbage Collector"
+            /* state == "G" */
+            ctx = "Garbage Collector (not compiled)"
         }
 
         count = states[state]

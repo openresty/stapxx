@@ -4,20 +4,22 @@ global robbers, total
 
 probe scheduler.ctxswitch {
     my_pid = target()
-    if (prev_pid == my_pid && next_pid != my_pid) {
-        robbers[pid2execname(next_pid)] <<< 1
+    if (prev_pid == my_pid && next_pid != 0 && next_pid != my_pid) {
+        name = pid2execname(next_pid)
+        if (name == "") {
+            name = sprintf("%d", next_pid)
+        }
+        robbers[name] <<< 1
         total++
     }
 }
 
 probe end {
+    printf("\n")
     i = 0
     foreach (robber in robbers- limit $^arg_limit :default(20)) {
         i++
         cnt = @count(robbers[robber])
-        if (robber == "") {
-            robber = "<unknown>"
-        }
         printf("#%d %s: %d%% (%d samples)\n", i, robber, cnt * 100 / total, cnt)
     }
     if (i == 0) {

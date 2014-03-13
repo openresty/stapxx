@@ -671,7 +671,7 @@ function luajit_backtrace(L, g, simple)
     bt = ""
 
     vmstate = $*g->vmstate
-    if (vmstate >= 0) {
+    if (vmstate >= 0 || (vmstate == -3 && $*g->jit_base->ptr32)) {
         /* compiled Lua code */
 
         T = luajit_get_trace(g, vmstate)
@@ -698,6 +698,12 @@ function luajit_backtrace(L, g, simple)
         /*
         if (bt != "") {
             warn(sprintf("JIT backtrace: %s\n", bt))
+        }
+        */
+
+        /*
+        if (vmstate == -3) {
+            printf("HIT JIT GC: %s===\n", bt)
         }
         */
 

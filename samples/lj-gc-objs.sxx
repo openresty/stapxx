@@ -66,13 +66,7 @@ function process(L)
     J = &$*GG->J
     $*J := @cast(J, "jit_State", "$^libluajit_path")
 
-    mc_size = 0
-    mc = $*J->mcarea
-    $*mc := @cast(mc, "MCLink", "$^libluajit_path")
-    while (mc) {
-        mc_size += $*mc->size
-        mc = $*mc->next
-    }
+    mc_size = $*J->szallmcarea
 
     if (mc_size) {
         printf("main machine code area size: %d bytes\n", mc_size)

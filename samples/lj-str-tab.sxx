@@ -107,3 +107,7 @@ function process(L)
            gettimeofday_us() - begin)
     exit()
 }
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\n\n", target())
+}

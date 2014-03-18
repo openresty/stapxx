@@ -1144,6 +1144,8 @@ ngx-lua-exec-time
 
 This tool measures the pure Lua code executation time (excluding any nonblocking IO time) accumulated in every request served by the specified Nginx worker at real-time and outputs the distribution of the latencies.
 
+The time for the nginx output filters and boilerplate Lua thread initializations are excluded.
+
 Note that both TCP sockets and stream-typed unix domain sockets are supported.
 
 Below is an example:

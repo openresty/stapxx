@@ -7,7 +7,7 @@ global begin, stats, func
 
 probe $^arg_func {
     if (pid() == target()) {
-        begin = gettimeofday_us()
+        begin = gettimeofday_ns()
         if (func == "") {
             func = probefunc()
         }
@@ -16,7 +16,7 @@ probe $^arg_func {
 
 probe $^arg_func.return {
     if (pid() == target() && begin > 0) {
-        stats <<< gettimeofday_us() - begin
+        stats <<< gettimeofday_ns() - begin
     }
 }
 
@@ -29,13 +29,13 @@ probe end {
         printf("No samples observed so far.\n");
 
     } else {
-        printf("Distribution of %s latencies (in microseconds)\n", func)
+        printf("Distribution of %s latencies (in nanoseconds)\n", func)
         printf("max/avg/min: %d/%d/%d\n", @max(stats), @avg(stats), @min(stats))
         print(@hist_log(stats))
     }
 }
 
 probe begin {
-    printf("Start tracing %d...\nPlease wait for %d seconds.\n\n",
+    printf("Start tracing %d ($^exec_path)...\nPlease wait for %d seconds.\n\n",
            target(), $^arg_time)
 }

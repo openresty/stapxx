@@ -1,0 +1,23 @@
+#!/usr/bin/env stap++
+
+@use luajit
+
+global stats
+
+probe process("$^libluajit_path").statement("*@lj_str.c:161") {
+    bucket = &$g->strhash[$h & $g->strmask]
+    stats <<< luajit_bucket_depth(bucket)
+    //printf("depth = %d\n", depth)
+    //exit()
+}
+
+probe end {
+    printf("Bucket depths accessed by lj_str_new (min/avg/max: %d/%d/%d)\n", @min(stats), @avg(stats), @max(stats))
+    print(@hist_linear(stats, 0, 10, 1))
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n", target())
+    printf("Hit Ctrl-C to end.\n")
+}

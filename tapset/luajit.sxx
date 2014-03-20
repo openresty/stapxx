@@ -775,3 +775,19 @@ function luajit_find_gcstr(g, str)
 
     return ret
 }
+
+function luajit_bucket_depth(p)
+{
+    n = 0
+    while (p) {
+        $*o := @cast(o, "GCobj", "$^libluajit_path")
+        o = luajit_gcref(p)
+        if (o == 0) {
+            break
+        }
+
+        n++;
+        p = &$*o->gch->nextgc
+    }
+    return n
+}

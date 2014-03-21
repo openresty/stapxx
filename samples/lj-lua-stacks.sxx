@@ -5,7 +5,7 @@
 
 global bts, jitted
 
-function process_timer_event()
+function process_event()
 {
     if (@defined(@var("globalL", "$^exec_path"))) {
         mL = @var("globalL", "$^exec_path")
@@ -53,10 +53,10 @@ function process_timer_event()
     return 0
 }
 
-probe timer.profile
+probe $^arg_probe :default(timer.profile)
 {
     if (pid() == target()) {
-        process_timer_event()
+        process_event()
     }
 }
 

@@ -5,7 +5,7 @@
 
 @define TSTR    %( 4 %)
 
-global bucket_lens, bucket_lens2, str_lens
+global bucket_lens, bucket_lens2, bucket_len_squared, str_lens
 
 probe @pfunc(ngx_process_events_and_timers)?, timer.profile
 {
@@ -77,6 +77,7 @@ function process(L)
 
         if (depth > 0) {
             bucket_lens2 <<< depth
+            bucket_len_squared <<< depth * depth
         }
 
         if (done) {
@@ -98,9 +99,11 @@ function process(L)
            @avg(bucket_lens), @min(bucket_lens), @sum(bucket_lens))
     print(@hist_log(bucket_lens))
 
-    printf("%d non-empty buckets: max=%d, avg=%d, min=%d, sum=%d (in entries)\n",
+    avg = @avg(bucket_lens2)
+    printf("%d non-empty buckets: max=%d, avg=%d, min=%d, sum=%d, var=%d (in entries)\n",
            @count(bucket_lens2), @max(bucket_lens2),
-           @avg(bucket_lens2), @min(bucket_lens2), @sum(bucket_lens2))
+           avg, @min(bucket_lens2), @sum(bucket_lens2),
+           @avg(bucket_len_squared) - avg * avg)
     print(@hist_linear(bucket_lens2, 1, 10, 1))
 
     printf("%d microseconds elapsed in the probe handler.\n",

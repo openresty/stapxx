@@ -4,6 +4,8 @@
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
+@use nginx.request
+
 global active_reqs
 global recv_begin
 global recv_elapsed

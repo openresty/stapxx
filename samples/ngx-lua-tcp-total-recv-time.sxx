@@ -4,6 +4,8 @@
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
+@use nginx.request
+
 global active_reqs
 global recv_begin
 global recv_elapsed
@@ -11,7 +13,14 @@ global stats
 
 probe @pfunc(ngx_http_process_request)
 {
-    active_reqs[$r] = 1
+    r = $r
+%( "$^arg_uri :default()" != ""  %?
+    if (ngx_req_uri(r) == "$^arg_uri") {
+        active_reqs[r] = 1
+    }
+%:
+    active_reqs[r] = 1
+%)
 }
 
 probe @pfunc(ngx_http_lua_socket_tcp_read)

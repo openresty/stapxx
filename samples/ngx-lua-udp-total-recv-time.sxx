@@ -11,7 +11,14 @@ global stats
 
 probe @pfunc(ngx_http_process_request)
 {
-    active_reqs[$r] = 1
+    r = $r
+%( "$^arg_uri" != ""  %?
+    if (ngx_req_uri(r) == "$^arg_uri") {
+        active_reqs[r] = 1
+    }
+%:
+    active_reqs[r] = 1
+%)
 }
 
 probe @pfunc(ngx_http_lua_socket_udp_read)

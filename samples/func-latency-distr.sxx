@@ -20,22 +20,28 @@ probe $^arg_func.return {
     }
 }
 
-probe timer.s($^arg_time :default(5)) {
-    exit()
-}
-
 probe end {
     if (begin == 0) {
         printf("No samples observed so far.\n");
 
     } else {
-        printf("Distribution of %s latencies (in nanoseconds)\n", func)
+        printf("Distribution of %s latencies (in nanoseconds) for %d samples\n", func, @count(stats))
         printf("max/avg/min: %d/%d/%d\n", @max(stats), @avg(stats), @min(stats))
         print(@hist_log(stats))
     }
 }
 
 probe begin {
-    printf("Start tracing %d ($^exec_path)...\nPlease wait for %d seconds.\n\n",
-           target(), $^arg_time)
+    printf("Start tracing %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
 }
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

@@ -1,0 +1,20 @@
+#!/usr/bin/env stap++
+
+@use nginx.chain
+@use nginx.request
+
+global size
+
+probe @pfunc(ngx_http_lua_post_subrequest) {
+    $*data := @cast($data, "ngx_http_lua_post_subrequest_data_t")
+    if (!$*data->ctx->seen_last_for_subreq) {
+        size += ngx_chain_buf_size($*data->ctx->body)
+        printf("%s %s?%s: body size: %d, content-length: %d, cached: %d\n",
+               ngx_req_method($r), ngx_req_uri($r), ngx_req_args($r),
+               size, $r->headers_out->content_length_n, $r->cached)
+    }
+}
+
+probe begin {
+    printf("Tracing %d ($^exec_path)\n\n", target())
+}

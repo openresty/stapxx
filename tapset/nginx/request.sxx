@@ -1,13 +1,80 @@
 // module nginx.request
 
+@define NGX_HTTP_GET         %( 0x0002 %)
+@define NGX_HTTP_HEAD        %( 0x0004 %)
+@define NGX_HTTP_POST        %( 0x0008 %)
+@define NGX_HTTP_PUT         %( 0x0010 %)
+@define NGX_HTTP_DELETE      %( 0x0020 %)
+@define NGX_HTTP_MKCOL       %( 0x0040 %)
+@define NGX_HTTP_COPY        %( 0x0080 %)
+@define NGX_HTTP_MOVE        %( 0x0100 %)
+@define NGX_HTTP_OPTIONS     %( 0x0200 %)
+
 function ngx_req_method(r)
 {
     $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
-    return user_string_n($*r->method_name->data, $*r->method_name->len)
+    m = $*r->method
+    if (m == @NGX_HTTP_GET) {
+        return "GET"
+    }
+
+    if (m == @NGX_HTTP_HEAD) {
+        return "HEAD"
+    }
+
+    if (m == @NGX_HTTP_POST) {
+        return "POST"
+    }
+
+    if (m == @NGX_HTTP_PUT) {
+        return "PUT"
+    }
+
+    if (m == @NGX_HTTP_DELETE) {
+        return "DELETE"
+    }
+
+    if (m == @NGX_HTTP_MKCOL) {
+        return "MKCOL"
+    }
+
+    if (m == @NGX_HTTP_COPY) {
+        return "COPY"
+    }
+
+    if (m == @NGX_HTTP_MOVE) {
+        return "MOVE"
+    }
+
+    if (m == @NGX_HTTP_OPTIONS) {
+        return "OPTIONS"
+    }
+
+    len = $*r->method_name->len
+    if (len == 0) {
+        return ""
+    }
+    return user_string_n_warn($*r->method_name->data, len)
 }
+
 
 function ngx_req_uri(r)
 {
     $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
-    return user_string_n($*r->uri->data, $*r->uri->len)
+    len = $*r->uri->len
+    if (len == 0) {
+        return ""
+    }
+    return user_string_n_warn($*r->uri->data, len)
+}
+
+
+function ngx_req_args(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    len = $*r->args->len
+    if (len == 0) {
+        return ""
+    }
+    return user_string_n_warn($*r->args->data, len)
 }

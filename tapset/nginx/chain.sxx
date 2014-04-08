@@ -1,0 +1,28 @@
+// module nginx.chain
+
+
+function ngx_buf_in_memory(b)
+{
+    $*b := @cast(b, "ngx_buf_t", "$^exec_path")
+    return $*b->temporary || $*b->memory || $*b->mmap
+}
+
+
+function ngx_buf_size(b)
+{
+    if (ngx_buf_in_memory(b)) {
+        return $*b->last - $*b->pos
+    }
+    return $*b->file_last - $*b->file_pos
+}
+
+
+function ngx_chain_buf_size(cl)
+{
+    $*cl := @cast(cl, "ngx_chain_t", "$^exec_path")
+    sz = 0
+    for (; cl; cl = $*cl->next) {
+        sz += ngx_buf_size($*cl->buf)
+    }
+    return sz
+}

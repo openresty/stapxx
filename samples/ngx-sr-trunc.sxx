@@ -9,7 +9,7 @@ global size
 probe @pfunc(ngx_http_lua_post_subrequest)
 {
     $*data := @cast($data, "ngx_http_lua_post_subrequest_data_t")
-    if ($*data->ctx->seen_last_for_subreq) {
+    if (!$*data->ctx->seen_last_for_subreq) {
         r = $r
         $*r := @cast(r, "ngx_http_request_t")
         size += ngx_chain_buf_size($*data->ctx->body)

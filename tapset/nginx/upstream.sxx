@@ -4,5 +4,60 @@ function ngx_u_resp_time(u)
 {
     $*u := @cast(u, "ngx_http_upstream_t", "$^exec_path")
     begin = $*u->state->response_sec * 1000 + $*u->state->response_msec
-    return gettimeofday_ms() - begin
+    if (begin > 1396988097414) {
+        return gettimeofday_ms() - begin
+    }
+    return begin
+}
+
+
+function ngx_u_resp_statuses(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    len = $*r->upstream_states->nelts
+    state = $*r->upstream_states->elts
+    $*state := @cast(state, "ngx_http_upstream_state_t", "$^exec_path")
+
+    s = ""
+    for (i = 0; i < len; i++) {
+        s .= sprintf(" %d", $*state[i]->status)
+    }
+    return s
+}
+
+
+function ngx_u_resp_lens(r)
+{
+    len = $*r->upstream_states->nelts
+    state = $*r->upstream_states->elts
+    $*state := @cast(state, "ngx_http_upstream_state_t", "$^exec_path")
+
+    s = ""
+    for (i = 0; i < len; i++) {
+        s .= sprintf(" %d", $*state[i]->response_length)
+    }
+    return s
+}
+
+
+
+function ngx_u_resp_times(r)
+{
+    len = $*r->upstream_states->nelts
+    state = $*r->upstream_states->elts
+    $*state := @cast(state, "ngx_http_upstream_state_t", "$^exec_path")
+
+    s = ""
+    for (i = 0; i < len; i++) {
+        begin = $*state[i]->response_sec * 1000 + $*state[i]->response_msec
+        if (begin > 1396988097414) {
+            time = gettimeofday_ms() - begin
+        } else {
+            time = begin
+        }
+
+        s .= sprintf(" %d", time)
+    }
+
+    return s
 }

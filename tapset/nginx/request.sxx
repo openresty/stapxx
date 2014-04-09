@@ -94,3 +94,19 @@ function ngx_req_host(r)
     }
     return ""
 }
+
+
+function ngx_req_ua(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    ua = $*r->headers_in->user_agent
+    if (ua) {
+        $*ua := @cast(ua, "ngx_table_elt_t", "$^exec_path")
+        len = $*ua->value->len
+        if (len == 0) {
+            return ""
+        }
+        return user_string_n_warn($*ua->value->data, len)
+    }
+    return ""
+}

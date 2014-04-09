@@ -78,3 +78,19 @@ function ngx_req_args(r)
     }
     return user_string_n_warn($*r->args->data, len)
 }
+
+
+function ngx_req_host(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    host = $*r->headers_in->host
+    if (host) {
+        $*host := @cast(host, "ngx_table_elt_t", "$^exec_path")
+        len = $*host->value->len
+        if (len == 0) {
+            return ""
+        }
+        return user_string_n_warn($*host->value->data, len)
+    }
+    return ""
+}

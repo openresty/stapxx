@@ -44,7 +44,7 @@ global seen_find_config
     }
 %)
 
-probe @pfunc(ngx_http_init_connection)
+probe @pfunc(ngx_http_create_request)
 {
     if (!matched_r && $^pid_ok) {
         init_conns[$c, pid()] = gettimeofday_us()

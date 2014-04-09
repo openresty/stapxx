@@ -4,6 +4,8 @@
  * Copyright (C) Yichun Zhang (agentzh)
  */
 
+@use nginx.request
+
 global matched_r
 global matched_pid
 
@@ -63,10 +65,20 @@ probe @pfunc(ngx_http_process_request)
         if (init_conn) {
 
         %( "$^arg_header :default()" == "" %?
+            %( "$^arg_uri :default()" == "" %?
             matched_r = $r
             matched_pid = pid()
             header_read_time = gettimeofday_us()
             begin_time = init_conn
+            %:
+            if (ngx_req_uri($r) == "$^arg_uri") {
+                matched_r = $r
+                matched_pid = pid()
+                header_read_time = gettimeofday_us()
+                begin_time = init_conn
+            }
+            %)
+
         %:
             target_header = "$^arg_header"
             target_header_len = strlen(target_header)

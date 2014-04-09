@@ -61,3 +61,25 @@ function ngx_u_resp_times(r)
 
     return s
 }
+
+
+function ngx_u_addr(r)
+{
+    len = $*r->upstream_states->nelts
+    state = $*r->upstream_states->elts
+    $*state := @cast(state, "ngx_http_upstream_state_t", "$^exec_path")
+
+    s = ""
+    for (i = 0; i < len; i++) {
+        peer = $*state[i]->peer
+        if (peer) {
+            $*peer := @cast(peer, "ngx_str_t", "$^exec_path")
+            len = $*peer->len
+            if (len) {
+                s .= sprintf(" %s", user_string_n_warn($*peer->data, len))
+            }
+        }
+    }
+
+    return s
+}

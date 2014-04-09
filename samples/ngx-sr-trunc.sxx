@@ -20,9 +20,9 @@ probe @pfunc(ngx_http_lua_post_subrequest)
         u = $*r->upstream
         $*u := @cast(u, "ngx_http_upstream_t")
         if (u) {
-            printf("  upstream resp-time=%s (ms), resp-len=%s (bytes), status=%s\n",
+            printf("  upstream resp-time=%s (ms), resp-len=%s (bytes), status=%s, addr=%s\n",
                    ngx_u_resp_times(r), ngx_u_resp_lens(r),
-                   ngx_u_resp_statuses(r))
+                   ngx_u_resp_statuses(r), ngx_u_addr(r))
         }
     }
 }

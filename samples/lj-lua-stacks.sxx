@@ -43,8 +43,12 @@ function process_event()
 %)
     }
 
-    bt = luajit_backtrace(L, g, 1)
+    bt = luajit_backtrace(L, g, $^arg_detailed :default(0) ? 0 : 1)
     if (bt != "") {
+        f = probefunc()
+        if (f != "") {
+            bt = f . "\n" . bt
+        }
         //printf("backtrace: %s\n", bt)
         bts[bt] <<< 1
         return 1

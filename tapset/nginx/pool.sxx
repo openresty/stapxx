@@ -1,0 +1,25 @@
+// module nginx.pool
+
+function ngx_pool_size(pool)
+{
+    sz = 0
+
+    p = pool
+    $*p := @cast(p, "ngx_pool_t", "$^exec_path")
+    $*pool := @cast(pool, "ngx_pool_t", "$^exec_path")
+    while (p) {
+        sz += $*p->d->end - p
+        p = $*p->d->next
+    }
+
+    $*large := @cast(large, "ngx_pool_large_t", "$^exec_path")
+    for (large = $*pool->large; large; large = $*large->next) {
+        ptr = $*large->alloc
+        if (ptr) {
+            ptr -= &@cast(0, "size_t")[1]
+            sz += @cast(ptr, "size_t")[0] & ~(&@cast(0, "size_t")[1] - 1)
+        }
+    }
+
+    return sz
+}

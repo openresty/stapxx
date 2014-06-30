@@ -823,6 +823,8 @@ This warnings are normal because our timer callback might run in an arbitrary co
 
 When sampling compiled Lua code's backtraces, we should not see these "copy fault" warnings at all because when compiled Lua code is running, the VM state is almost always consistent (because the running traces do not synchronize the VM state until they exit).
 
+By default, this tool computes the line numbers at which the corresponding Lua functions are defined (that is, the first line of the Lua function definition). If you want accurate position for the Lua source line being executed in the resulting backtraces, you can specify the `--arg detailed=1` command-line option.
+
 This tool is superior to LuaJIT's builtin low-overhead profiler in that
 
 1. this tool never flushes the existing compiled traces but LuaJIT's builtin profiler always does upon profiler startups and exits,
@@ -1438,6 +1440,11 @@ value |-------------------------------------------------- count
 ```
 
 [Back to TOC](#table-of-contents)
+
+lj-str-tab
+----------
+
+Analayzing the structure and various statistics of the global Lua string hash table in the LuaJIT v2.1 VM.
 
 Author
 ======

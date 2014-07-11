@@ -833,6 +833,8 @@ This tool is superior to LuaJIT's builtin low-overhead profiler in that
 1. this tool can be turned on and off more easily on any running (nginx) processes specified by pid. And when this tool is not running, there is strictly zero overhead in the target process.
 1. Bugs in this tool has no impact on the target process, even when reading from bad memory addresses.
 
+The overhead exposed on the target process is usually small. For example, the throughput (req/sec) limit of an nginx worker process doing simplest "hello world" requests drops by only 10% (only when this tool is running), as measured by `ab -k -c2 -n100000` when using Linux kernel 3.6.10 and systemtap 2.5. The impact on full-fledged production processes is usually smaller than even that, for instance, only 5% drop in the throughput limit is observed in a production-level Lua CDN application.
+
 Special thanks go to Mike Pall for providing technical support in the
 LuaJIT VM internals.
 
@@ -1175,6 +1177,8 @@ Below is an example:
      4096 |                                                     0
      8192 |                                                     0
 ```
+
+The overhead exposed on the target process is usually small. For example, the throughput (req/sec) limit of an nginx worker process running a full-fledged Lua CDN application drops by only 14% (only when this tool is running), as measured by `ab -k -c2 -n100000` when using Linux kernel 3.6.10 and systemtap 2.5.
 
 [Back to TOC](#table-of-contents)
 

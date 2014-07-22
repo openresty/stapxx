@@ -47,6 +47,8 @@ Table of Contents
     * [ngx-lua-udp-total-recv-time](#ngx-lua-udp-total-recv-time)
     * [ngx-orig-resp-body-len](#ngx-orig-resp-body-len)
     * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
+    * [lj-str-tab](#lj-str-tab)
+* [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
@@ -1450,6 +1452,17 @@ lj-str-tab
 
 Analayzing the structure and various statistics of the global Lua string hash table in the LuaJIT v2.1 VM.
 
+[Back to TOC](#table-of-contents)
+
+Installation
+============
+
+You need a recent enough Linux kernel (like 3.5+) *or* a older kernel with the utrace patch applied.
+
+You also need to install systemtap first. It is recommended to build it from the latest source. See this document for detailed instructions: http://openresty.org/#BuildSystemtap
+
+[Back to TOC](#table-of-contents)
+
 Author
 ======
 
@@ -1462,7 +1475,7 @@ Copyright and License
 
 This module is licensed under the BSD license.
 
-Copyright (C) 2013, by Yichun "agentzh" Zhang (章亦春) <agentzh@gmail.com>, CloudFlare Inc.
+Copyright (C) 2013-2014, by Yichun "agentzh" Zhang (章亦春) <agentzh@gmail.com>, CloudFlare Inc.
 
 All rights reserved.
 

@@ -52,9 +52,7 @@ probe @pfunc(ngx_http_create_request)
 }
 
 probe @pfunc(ngx_http_close_connection) {
-    if (!begin_time) {
-        delete init_conns[$c, pid()]
-    }
+    delete init_conns[$c, pid()]
 }
 
 probe @pfunc(ngx_http_process_request)
@@ -254,7 +252,7 @@ probe @pfunc(ngx_http_log_request)
             matched_pid = 0
             seen_find_config = 0
             header_read_time = 0
-            delete init_conns[$r->connection, pid()]
+            delete init_conns
         }
         %)
     }

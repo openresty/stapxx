@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw( GetOptions );
+use Getopt::Long qw( GetOptions :config no_ignore_case);
 use File::Spec ();
 use File::Temp qw( tempdir );
 use FindBin ();

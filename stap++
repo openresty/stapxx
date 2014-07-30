@@ -12,6 +12,7 @@ GetOptions("D=s@",          \(my $D_opts),
            "arg=s%",        \(my $args),
            "args",          \(my $print_args),
            "dump-src",      \(my $dump_src),
+           "exec=s",        \(my $exec_path),
            "help",          \(my $help),
            "master=i",      \(my $master_pid),
            "x=i",           \(my $pid),
@@ -101,6 +102,11 @@ for my $opt (@$D_opts) {
     push @stap_opts, "-D$opt";
 }
 
+if (defined $exec_path) {
+    $StdVars{exec_path} = $exec_path;
+    push @stap_opts, "-d '$exec_path'";
+}
+
 if (defined $pid) {
     if (defined $master_pid) {
         die "-x <pid> and --master <pid> are exclusive.\n";
@@ -116,9 +122,11 @@ if (defined $pid) {
     $StdVars{pid_ok} = gen_pid_test_condition();
     $StdVars{target} = $pid;
 
-    my $exec_path = readlink $exec_file;
-    $StdVars{exec_path} = $exec_path;
-    push @stap_opts, "-d '$exec_path'";
+    if (!defined $exec_path) {
+        $exec_path = readlink $exec_file;
+        $StdVars{exec_path} = $exec_path;
+        push @stap_opts, "-d '$exec_path'";
+    }
 
     # process DSO files
     my $maps_file = "/proc/$pid/maps";
@@ -146,9 +154,11 @@ if (defined $master_pid) {
             "you do not have enough permissions.\n";
     }
 
-    my $exec_path = readlink $exec_file;
-    $StdVars{exec_path} = $exec_path;
-    push @stap_opts, "-d '$exec_path'";
+    if (!defined $exec_path) {
+        $exec_path = readlink $exec_file;
+        $StdVars{exec_path} = $exec_path;
+        push @stap_opts, "-d '$exec_path'";
+    }
 
     # process DSO files
     my @pids = get_child_processes($master_pid);
@@ -175,6 +185,14 @@ if (defined $master_pid) {
     for my $path (sort keys %DSOs) {
         push @stap_opts, "-d '$path'";
     }
+}
+
+if (!defined $StdVars{pid_ok} && defined $exec_path) {
+    $StdVars{pid_ok} = '1';
+}
+
+if (!defined $StdVars{target} && defined $exec_path) {
+    $StdVars{target} = 'ANY';
 }
 
 if (!$print_args) {
@@ -405,6 +423,7 @@ Options:
     --arg NM=VAL    Specify extra user arguments (for $^arg_NM).
     --args          Print all available arguments for --arg.
     -e SCRIPT       Run given script.
+    --exec PATH     Specify the executable file path to be traced.
     -D NM=VAL       Emit macro definition into generated C code.
     --help          Print this help.
     -I PATH         Specify the stap++ tapset library search directory.

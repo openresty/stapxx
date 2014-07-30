@@ -82,13 +82,16 @@ Standard Macro Variables
 ### $^exec_path
 
 The variable `$^exec_path` is always evaluated to the path to the executable file
-for the pid specified by the `-x` option.
+for the pid specified by the `-x` or `--master` option.
 
 Here is an example:
 
 ```stap
     probe process("$^exec_path").function("blah") { ... }
 ```
+
+When you specify the `--exec PATH` option on the command line, then
+this PATH is always used regardless of the presense of the `-x` or `--master` option.
 
 [Back to TOC](#table-of-contents)
 

@@ -309,3 +309,9 @@ probe @pfunc(ngx_http_upstream_finalize_request)
 probe begin {
     printf("Start tracing process $^target ($^exec_path)...\n\n")
 }
+
+probe timer.s(3) {
+    if (!begin_time) {
+        delete init_conns
+    }
+}

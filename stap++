@@ -9,9 +9,11 @@ use File::Temp qw( tempdir );
 use FindBin ();
 
 GetOptions("D=s@",          \(my $D_opts),
+           "d=s@",          \(my $d_opts),
            "arg=s%",        \(my $args),
            "args",          \(my $print_args),
            "dump-src",      \(my $dump_src),
+           "sample-pid=i",  \(my $sample_pid),
            "exec=s",        \(my $exec_path),
            "help",          \(my $help),
            "master=i",      \(my $master_pid),
@@ -94,6 +96,10 @@ if ($verbose) {
     push @stap_opts, "-v";
 }
 
+if ($d_opts) {
+    push @stap_opts, @$d_opts;
+}
+
 if (defined $skip_badvars) {
     push @stap_opts, "--skip-badvars";
 }
@@ -128,22 +134,7 @@ if (defined $pid) {
         push @stap_opts, "-d '$exec_path'";
     }
 
-    # process DSO files
-    my $maps_file = "/proc/$pid/maps";
-    open my $in, $maps_file
-        or die "Cannot open $maps_file for reading: $!\n";
-
-    while (<$in>) {
-        if (m{\S+\.so(?:\.\d+)*$}) {
-            my $path = $&;
-            $DSOs{$path} = 1;
-            #warn "seeing $path";
-        }
-    }
-
-    for my $path (sort keys %DSOs) {
-        push @stap_opts, "-d '$path'";
-    }
+    process_dso($pid);
 }
 
 if (defined $master_pid) {
@@ -170,21 +161,11 @@ if (defined $master_pid) {
     $StdVars{target} = "@pids";
 
     my $pid = $pids[0];
-    my $maps_file = "/proc/$pid/maps";
-    open my $in, $maps_file
-        or die "Cannot open $maps_file for reading: $!\n";
+    process_dso($pid);
+}
 
-    while (<$in>) {
-        if (m{\S+\.so(?:\.\d+)*$}) {
-            my $path = $&;
-            $DSOs{$path} = 1;
-            #warn "seeing $path";
-        }
-    }
-
-    for my $path (sort keys %DSOs) {
-        push @stap_opts, "-d '$path'";
-    }
+if ($sample_pid) {
+    process_dso($sample_pid);
 }
 
 if (!defined $StdVars{pid_ok} && defined $exec_path) {
@@ -424,10 +405,12 @@ Options:
     --args          Print all available arguments for --arg.
     -e SCRIPT       Run given script.
     --exec PATH     Specify the executable file path to be traced.
+    -d PATH         Load debug info for the specified objects
     -D NM=VAL       Emit macro definition into generated C code.
     --help          Print this help.
     -I PATH         Specify the stap++ tapset library search directory.
     --master PID    Specify the master pid whose child processes are traced.
+    --sample-pid PID  Sample process to inspect DSO objects to load via -d
     -v              Be verbose.
     -x PID          Sets target() to PID (also for $^exec_path and $^libxxx_path).
 
@@ -473,4 +456,23 @@ sub gen_pid_test_condition {
         push @c, "pid() == $pid";
     }
     return '(' . join(" || ", @c) . ')';
+}
+
+sub process_dso {
+    my $pid = shift;
+    my $maps_file = "/proc/$pid/maps";
+    open my $in, $maps_file
+        or die "Cannot open $maps_file for reading: $!\n";
+
+    while (<$in>) {
+        if (m{\S+\.so(?:\.\d+)*$}) {
+            my $path = $&;
+            $DSOs{$path} = 1;
+            #warn "seeing $path";
+        }
+    }
+
+    for my $path (sort keys %DSOs) {
+        push @stap_opts, "-d '$path'";
+    }
 }

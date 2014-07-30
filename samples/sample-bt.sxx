@@ -1,0 +1,53 @@
+#!/usr/bin/env stap++
+
+/*
+ * Copyright (C) Yichun Zhang (agentzh)
+ */
+
+global bts;
+global quit = 0
+
+probe timer.profile {
+    if ($^pid_ok) {
+        %( "$^arg_execname :default()" != "" %?
+        if (execname() == "$^arg_execname") {
+        %)
+
+        if (!quit) {
+            bts[ubacktrace()] <<< 1
+
+        } else {
+
+            foreach (usr in bts- limit $^arg_limit :default(1000)) {
+                print_ustack(usr)
+                printf("\t%d\n", @count(bts[usr]))
+            }
+
+            exit()
+        }
+
+        %( "$^arg_execname :default()" != "" %?
+        }
+        %)
+    }
+}
+
+probe timer.s($^arg_time) {
+    nstacks = 0
+    foreach (bt in bts limit 1) {
+        nstacks++
+    }
+
+    if (nstacks == 0) {
+        warn("No backtraces found. Quitting now...\n")
+        exit()
+
+    } else {
+        warn("Time's up. Quitting now...(it may take a while)\n")
+        quit = 1
+    }
+}
+
+probe begin {
+    warn(sprintf("Start tracing process $^target ($^exec_path)...\n"))
+}

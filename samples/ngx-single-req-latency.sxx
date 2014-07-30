@@ -198,7 +198,8 @@ probe @pfunc(ngx_http_core_content_phase)
 
 probe @pfunc(ngx_http_log_request)
 {
-    if (pid() == matched_pid && $r == matched_r) {
+    pid = pid()
+    if (pid == matched_pid && $r == matched_r) {
         now = gettimeofday_us()
 
         @eval_rewrite_phase_time
@@ -213,7 +214,7 @@ probe @pfunc(ngx_http_log_request)
             entered_log_phase = now
         }
 
-        printf("\n%s %s\n", user_string_n($r->method_name->data, $r->method_name->len),
+        printf("[%d] pid:%d %s %s\n", now, pid, user_string_n($r->method_name->data, $r->method_name->len),
                $r->uri->data ? user_string_n($r->unparsed_uri->data,
                                              $r->unparsed_uri->len)
                              : "")
@@ -306,5 +307,5 @@ probe @pfunc(ngx_http_upstream_finalize_request)
 }
 
 probe begin {
-    printf("Start tracing process $^target ($^exec_path)...\n")
+    printf("Start tracing process $^target ($^exec_path)...\n\n")
 }

@@ -254,6 +254,7 @@ probe @pfunc(ngx_http_log_request)
             matched_pid = 0
             seen_find_config = 0
             header_read_time = 0
+            delete init_conns[$r->connection, pid()]
         }
         %)
     }

@@ -220,8 +220,14 @@ probe @pfunc(ngx_http_log_request)
                                              $r->unparsed_uri->len)
                              : "")
 
+        total = now - begin_time
+
+        %( "$^arg_min :default()" != "" %?
+        if (total >= $^arg_min) {
+        %)
+
         printf("    total: %dus, accept() ~ header-read: %dus, rewrite: %dus, pre-access: %dus, access: %dus, content: %dus\n    upstream: connect=%dus, time-to-first-byte=%dus, read=%dus\n",
-               now - begin_time,
+               total,
                header_read_time - begin_time,
                rewrite_phase_time,
                preaccess_phase_time,
@@ -230,7 +236,26 @@ probe @pfunc(ngx_http_log_request)
                upstream_connect_time,
                upstream_send_time,
                upstream_read_time)
+        //printf("exiting...")
         exit()
+
+        %( "$^arg_min :default()" != "" %?
+        } else {
+            begin_time = 0
+            entered_log_phase = 0
+            entered_rewrite_phase = 0
+            entered_preaccess_phase = 0
+            entered_access_phase = 0
+            entered_content_phase = 0
+            entered_upstream_connect = 0
+            entered_upstream_send = 0
+            entered_upstream_read = 0
+            matched_r = 0
+            matched_pid = 0
+            seen_find_config = 0
+            header_read_time = 0
+        }
+        %)
     }
 }
 
@@ -259,7 +284,8 @@ probe @pfunc(ngx_http_upstream_process_header)
     if (entered_upstream_send && pid() == matched_pid && $r == matched_r) {
         now = gettimeofday_us()
         upstream_send_time += now - entered_upstream_send
-        entered_upstream_read = now
+        entered_upstream_read = 0
+        content_phase_time = 0
     }
 }
 

@@ -60,7 +60,7 @@ if ($help) {
 my %set_D_opts;
 for my $opt (@$D_opts) {
     #warn "$opt\n";
-    if ($opt =~ /^(MAXACTION|MAXMAPENTRIES|MAXBACKTRACE)=/) {
+    if ($opt =~ /^([_A-Z]+)=/) {
         $set_D_opts{$1} = 1;
     }
 }

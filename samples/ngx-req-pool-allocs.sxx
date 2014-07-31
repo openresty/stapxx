@@ -45,6 +45,7 @@ probe @pfunc(ngx_palloc)
                 /* we omit ptr alignment here */
                 if ($*pool->d->end - $*pool->d->last >= sz) {
                     found = 1
+                    break
                 }
 
                 pool = $*pool->d->next

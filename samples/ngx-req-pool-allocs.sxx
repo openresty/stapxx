@@ -7,7 +7,7 @@ global stats, alloc, active
 probe @pfunc(ngx_http_free_request).callee("ngx_destroy_pool")
 {
     pool = $pool
-    printf("free req pool %p\n", pool)
+    //printf("free req pool %p\n", pool)
     if (active[pool]) {
         stats <<< @count(alloc[pool])
         delete alloc[pool]
@@ -21,7 +21,7 @@ probe @pfunc(ngx_http_create_request).return
     $*r := @cast(r, "ngx_http_request_t")
     pool = $*r->pool
     if (pool) {
-        printf("create req pool %p\n", pool);
+        //printf("create req pool %p\n", pool);
         active[pool] = 1
         alloc[pool] <<< 1
     }

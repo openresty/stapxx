@@ -50,9 +50,14 @@ probe @pfunc(ngx_palloc)
 
                 pool = $*pool->d->next
             }
+        } else {
+            //printf("large block: %d\n", sz)
         }
 
+        //printf("alloc: sz:%d, found:%d\n", sz, found)
+
         if (!found) {
+            //printf("HIT\n")
             alloc[pool] <<< 1
         }
 %)

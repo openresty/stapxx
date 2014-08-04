@@ -109,8 +109,28 @@ for my $opt (@$D_opts) {
 }
 
 if (defined $exec_path) {
+    if (!-f $exec_path) {
+        die "$exec_path not found.\n";
+    }
+
     $StdVars{exec_path} = $exec_path;
     push @stap_opts, "-d '$exec_path'";
+
+    open my $in, "ldd $exec_path|"
+        or die "cannot run the command \"ldd $exec_path\": $!\n";
+    while (<$in>) {
+        if (m{\s+(\/\S+\.so(?:\.\d+)*)}) {
+            my $path = $1;
+            warn "Found DSO $path.\n";
+            $DSOs{$path} = 1;
+        }
+    }
+
+    for my $path (sort keys %DSOs) {
+        push @stap_opts, "-d '$path'";
+    }
+
+    close $in;
 }
 
 if (defined $pid) {

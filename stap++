@@ -121,7 +121,7 @@ if (defined $exec_path) {
     while (<$in>) {
         if (m{\s+(\/\S+\.so(?:\.\d+)*)}) {
             my $path = $1;
-            warn "Found DSO $path.\n";
+            #warn "Found DSO $path.\n";
             $DSOs{$path} = 1;
         }
     }

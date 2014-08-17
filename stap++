@@ -97,7 +97,8 @@ if ($verbose) {
 }
 
 if ($d_opts) {
-    push @stap_opts, @$d_opts;
+    my @opts = map { "-d $_" } @$d_opts;
+    push @stap_opts, @opts;
 }
 
 if (defined $skip_badvars) {

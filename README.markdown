@@ -1460,7 +1460,7 @@ Analayzing the structure and various statistics of the global Lua string hash ta
 Installation
 ============
 
-You need a recent enough Linux kernel (like 3.5+) *or* a older kernel with the utrace patch applied.
+You need a recent enough Linux kernel (like 3.5+) *or* a older kernel with the utrace patch applied (for Linux distributions in the RedHat family, like RHEL, CentOS, and Fedora, the utrace patch should be included in their older kernels by default).
 
 You also need to install systemtap first. It is recommended to build it from the latest source. See this document for detailed instructions: http://openresty.org/#BuildSystemtap
 

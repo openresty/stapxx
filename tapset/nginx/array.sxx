@@ -1,0 +1,12 @@
+// module nginx.array
+
+function get_ngx_array_len(ngx_arr) {
+    $*arr := @cast(ngx_arr, "ngx_array_t", "$^exec_path")
+    return $*arr->nelts
+    
+}
+
+function get_ngx_array_elts(ngx_arr) {
+    $*arr := @cast(ngx_arr, "ngx_array_t", "$^exec_path")
+    return $*arr->elts
+}

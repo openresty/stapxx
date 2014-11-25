@@ -48,6 +48,8 @@ Table of Contents
     * [ngx-orig-resp-body-len](#ngx-orig-resp-body-len)
     * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
     * [lj-str-tab](#lj-str-tab)
+    * [ngx-ssl-session-ticket-keys](#ngx-ssl-session-ticket-keys)
+    * [ngx-ssl-session-resumption-stats](#ngx-ssl-session-resumption-stats)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1453,7 +1455,37 @@ value |-------------------------------------------------- count
 lj-str-tab
 ----------
 
-Analayzing the structure and various statistics of the global Lua string hash table in the LuaJIT v2.1 VM.
+Analyzing the structure and various statistics of the global Lua string hash table in the LuaJIT v2.1 VM.
+
+[Back to TOC](#table-of-contents)
+
+ngx-ssl-session-ticket-keys
+----------
+
+Dumping ssl session ticket keys of a nginx worker.
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 3781.
+$ ./samples/ngx-ssl-session-ticket-keys.sxx -x 3781
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-ssl-session-resumption-stats
+----------
+
+Analyzing the statistics of nginx SSL/TLS session ticket resumption.
+
+```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming one nginx worker process has the pid 3781.
+$ ./samples/ngx-ssl-session-resumption-stats.sxx -x 3781
+```
 
 [Back to TOC](#table-of-contents)
 

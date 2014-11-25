@@ -1,0 +1,21 @@
+// module openssl
+
+// extract ex_data pointer from openssl SSL_CTX
+function get_ssl_ex_data(ssl_ctx) {
+    $*ctx := @cast(ssl_ctx, "SSL_CTX", "$^exec_path")
+    return &$*ctx->ex_data
+}
+
+// extract number of items in SSL_CTX ex_data
+function get_ssl_ex_data_len(ssl_ctx) {
+    ex_data = get_ssl_ex_data(ssl_ctx)
+    $*data := @cast(ex_data, "CRYPTO_EX_DATA", "$^exec_path")
+    return $*data->sk->stack->num
+}
+
+// extract the item specified by idx in SSL_CTX ex_data
+function get_ssl_ex_data_item(ssl_ctx, idx) {
+    ex_data = get_ssl_ex_data(ssl_ctx)
+    $*data := @cast(ex_data, "CRYPTO_EX_DATA", "$^exec_path")
+    return $*data->sk->stack->data[idx]
+}

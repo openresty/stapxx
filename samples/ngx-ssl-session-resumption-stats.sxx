@@ -1,0 +1,47 @@
+#!/usr/bin/env stap++
+
+# Capture ssl session resumption statistics.
+
+global total
+global tickets
+global resumed
+global reencrypted
+
+probe begin {
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
+}
+
+probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
+    total++;
+    # record client session ticket decryption calls
+    if ($enc == 0) {
+        tickets++;
+        if ($return > 0) resumed++;
+        if ($return > 1) reencrypted++;
+    }
+}
+
+probe end {
+    printf("Stop tracing NGX OPENSSL ticket key callback\n");
+    printf("Total sessions: %d\n", total);
+    printf("Total session tickets: %d\n", tickets);
+    printf("Total resumed session: %d\n", resumed);
+    printf("Total re-encrypted session ticket: %d\n", reencrypted);
+
+    if (total > 0) {
+        ratio1 = (tickets * 100) / total;
+
+    } else {
+        ratio1 = 0;
+    }
+
+    if (tickets > 0) {
+        ratio2 = (resumed * 100) / tickets;
+
+    } else {
+        ratio2 = 0;
+    }
+    printf("Session resumption attempts ratio: %d percent\n", ratio1)
+    printf("Session resumption success ratio: %d percent\n", ratio2)
+    exit();
+}

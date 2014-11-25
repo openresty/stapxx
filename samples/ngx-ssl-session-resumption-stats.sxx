@@ -8,7 +8,7 @@ global resumed
 global reencrypted
 
 probe begin {
-    printf("Start tracing NGX OPENSSL ticket key callback\n");
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
 }
 
 probe @pfunc(ngx_ssl_session_ticket_key_callback).return {

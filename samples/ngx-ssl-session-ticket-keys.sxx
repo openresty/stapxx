@@ -6,7 +6,7 @@
 @use openssl
 
 probe begin {
-    printf("Start tracing NGX OPENSSL ticket key callback\n")
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
 }
 
 // print 16-byte key name
@@ -71,9 +71,4 @@ probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
             print_session_ticket_key(last_key)
         }
     }
-}
-
-probe end {
-    printf("Stop tracing NGX OPENSSL ticket key callback\n")
-    exit()
 }

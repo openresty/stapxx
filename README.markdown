@@ -104,7 +104,7 @@ This variable expands to the absolute path of the DSO library file specified by 
 Below is an example for tracing a user-land function in the libpcre library:
 
 ```stap
-    probe process("$^libpcre_path").statement("pcre_exec")
+    probe process("$^libpcre_path").function("pcre_exec")
     {
         println("pcre_exec called")
         print_ubacktrace()

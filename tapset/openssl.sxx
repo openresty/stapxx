@@ -1,4 +1,4 @@
-// module openssl.ssl_ctx
+// module openssl
 
 // extract ex_data pointer from openssl SSL_CTX
 function get_ssl_ex_data(ssl_ctx) {

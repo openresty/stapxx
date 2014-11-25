@@ -48,6 +48,7 @@ Table of Contents
     * [ngx-orig-resp-body-len](#ngx-orig-resp-body-len)
     * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
     * [lj-str-tab](#lj-str-tab)
+    * [func-latency-distr](#func-latency-distr)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1454,6 +1455,59 @@ lj-str-tab
 ----------
 
 Analayzing the structure and various statistics of the global Lua string hash table in the LuaJIT v2.1 VM.
+
+[Back to TOC](#table-of-contents)
+
+func-latency-distr
+------------------
+
+Calculates the latency distribution of any function-like probes which support both entry and return probes.
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 3781.
+
+$ func-latency-distr.sxx -x 3781 --arg func='process("$^libluajit_path").function("lj_str_new")'
+Start tracing 18356 (/opt/nginx/sbin/nginx)
+Hit Ctrl-C to end.
+^C
+Distribution of lj_str_new latencies (in nanoseconds) for 1202 samples
+max/avg/min: 27463/3309/2779
+value |-------------------------------------------------- count
+  512 |                                                      0
+ 1024 |                                                      0
+ 2048 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   1160
+ 4096 |@                                                    35
+ 8192 |                                                      5
+16384 |                                                      2
+32768 |                                                      0
+65536 |                                                      0
+```
+
+```
+$ func-latency-distr.sxx -x 27603 --arg func=vfs.write --arg time=10
+Start tracing 27603 (/opt/nginx/sbin/nginx)
+Please wait for 10 seconds...
+Distribution of vfs_write latencies (in nanoseconds) for 1201 samples
+max/avg/min: 545751/28313/1761
+  value |-------------------------------------------------- count
+    256 |                                                     0
+    512 |                                                     0
+   1024 |                                                     2
+   2048 |                                                     0
+   4096 |                                                     9
+   8192 |@@@@@@@@@@@@@                                      194
+  16384 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  695
+  32768 |@@@@@@@@@@@@@@@@@@                                 254
+  65536 |@@                                                  41
+ 131072 |                                                     5
+ 262144 |                                                     0
+ 524288 |                                                     1
+1048576 |                                                     0
+2097152 |                                                     0
+```
 
 [Back to TOC](#table-of-contents)
 

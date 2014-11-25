@@ -1,6 +1,6 @@
 #!/usr/bin/env stap++
 
-# Capture ssl session resumption statistics. 
+# Capture ssl session resumption statistics.
 
 global total
 global tickets
@@ -39,7 +39,7 @@ probe end {
         ratio2 = (resumed * 100) / tickets;
 
     } else {
-        ratio2 = 0;   
+        ratio2 = 0;
     }
     printf("Session resumption attempts ratio: %d percent\n", ratio1)
     printf("Session resumption success ratio: %d percent\n", ratio2)

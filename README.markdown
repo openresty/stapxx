@@ -1465,8 +1465,11 @@ ngx-ssl-session-ticket-keys
 Dumping ssl session ticket keys of a nginx worker.
 
 ```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
 # assuming one nginx worker process has the pid 3781.
-$ ./samples/ngx-ssl-session-ticket-keys.sxx -I ./tapset -x 3781
+$ ./samples/ngx-ssl-session-ticket-keys.sxx -x 3781
 ```
 
 [Back to TOC](#table-of-contents)
@@ -1477,6 +1480,9 @@ ngx-ssl-session-resumption-stats
 Analyzing the statistics of nginx SSL/TLS session ticket resumption.
 
 ```bash
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
 # assuming one nginx worker process has the pid 3781.
 $ ./samples/ngx-ssl-session-resumption-stats.sxx -x 3781
 ```

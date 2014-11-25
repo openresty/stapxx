@@ -1,4 +1,4 @@
-// module nginx.openssl
+// module openssl.ssl_ctx
 
 // extract ex_data pointer from openssl SSL_CTX
 function get_ssl_ex_data(ssl_ctx) {
@@ -9,11 +9,13 @@ function get_ssl_ex_data(ssl_ctx) {
 // extract number of items in SSL_CTX ex_data
 function get_ssl_ex_data_len(ssl_ctx) {
     ex_data = get_ssl_ex_data(ssl_ctx)
-    return ex_data->sk->stack->num
+    $*data := @cast(ex_data, "CRYPTO_EX_DATA", "$^exec_path")
+    return $*data->sk->stack->num
 }
 
 // extract the item specified by idx in SSL_CTX ex_data
 function get_ssl_ex_data_item(ssl_ctx, idx) {
     ex_data = get_ssl_ex_data(ssl_ctx)
-    return ex_data->sk->stack->data[idx]
+    $*data := @cast(ex_data, "CRYPTO_EX_DATA", "$^exec_path")
+    return $*data->sk->stack->data[idx]
 }

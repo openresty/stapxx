@@ -3,7 +3,7 @@
 # Capture ssl session tickets.
 
 @use nginx.array
-@use nginx.openssl
+@use openssl
 
 probe begin {
     printf("Start tracing NGX OPENSSL ticket key callback\n")
@@ -14,7 +14,7 @@ function print_key_name(name) {
     printf("key name: ");
     $*n := @cast(name, "unsigned char", "$^exec_path")
     for (i=0; i<16; i++) {
-       printf("%02x", $*n[i]) 
+       printf("%02x", $*n[i])
     }
     printf("\n")
 }
@@ -24,7 +24,7 @@ function print_key_aes(state) {
     printf("key aes state: ");
     $*s := @cast(state, "unsigned char", "$^exec_path")
     for (i=0; i<16; i++) {
-       printf("%02x", $*s[i]) 
+       printf("%02x", $*s[i])
     }
     printf("\n")
 }
@@ -34,7 +34,7 @@ function print_key_hmac(state) {
     printf("key hmac state: ");
     $*s := @cast(state, "unsigned char", "$^exec_path")
     for (i=0; i<16; i++) {
-       printf("%02x", $*s[i]) 
+       printf("%02x", $*s[i])
     }
     printf("\n")
 }
@@ -63,7 +63,7 @@ probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
         } else {
             key_ptr = get_ngx_array_elts(keys)
             enc_key = key_ptr
-            last_key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t", "$^exec_path")[keys_len-1] 
+            last_key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t", "$^exec_path")[keys_len-1]
             printf("keys len %d\n", keys_len)
             printf("enc key:\n")
             print_session_ticket_key(enc_key)

@@ -8,7 +8,10 @@ use File::Spec ();
 use File::Temp qw( tempdir );
 use FindBin ();
 
+sub quote_sh_args ($);
+
 GetOptions("D=s@",          \(my $D_opts),
+           "c=s",           \(my $shcmd),
            "d=s@",          \(my $d_opts),
            "arg=s%",        \(my $args),
            "args",          \(my $print_args),
@@ -248,7 +251,11 @@ while (my ($lib, $src) = each %UsedLibs) {
 
 push @stap_opts, "-I$tmpdir";
 
-my $cmd = "stap @stap_opts -";
+if (defined $shcmd) {
+    push @stap_opts, "-c", $shcmd;
+}
+
+my $cmd = "stap " . quote_sh_args(\@stap_opts) . " -";
 #warn $cmd;
 open my $in, "|$cmd"
     or die "Cannot run stap: $!\n";
@@ -295,7 +302,8 @@ sub eval_std_var {
     }
 
     if ($var eq 'exec_path') {
-        die "$file: line $.: \$^exec_path is used but no -x <pid> option is specified.\n";
+        die "$file: line $.: \$^exec_path is used but neither -x <pid> ",
+            "nor --exec <path> is specified.\n";
 
     } elsif ($var =~ /^arg_(\w+)$/) {
         die "$file: line $.: \$^$var is used but no --arg $1=VAL option is specified.\n";
@@ -424,10 +432,11 @@ Usage:
 Options:
     --arg NM=VAL    Specify extra user arguments (for $^arg_NM).
     --args          Print all available arguments for --arg.
-    -e SCRIPT       Run given script.
-    --exec PATH     Specify the executable file path to be traced.
+    -c CMD     start the probes, run CMD, and exit when it finishes
     -d PATH         Load debug info for the specified objects
     -D NM=VAL       Emit macro definition into generated C code.
+    -e SCRIPT       Run given script.
+    --exec PATH     Specify the executable file path to be traced.
     --help          Print this help.
     -I PATH         Specify the stap++ tapset library search directory.
     --master PID    Specify the master pid whose child processes are traced.
@@ -497,3 +506,23 @@ sub process_dso {
         push @stap_opts, "-d '$path'";
     }
 }
+
+sub quote_sh_args ($) {
+    my ($args) = @_;
+    for my $arg (@$args) {
+       if ($arg =~ m{^[- "&%;,|?*.+=\w:/()]*$}) {
+          if ($arg =~ /[ "&%;,|?*()]/) {
+             $arg = "'$arg'";
+          }
+          next;
+       }
+       $arg =~ s/\\/\\\\/g;
+       $arg =~ s/'/\\'/g;
+       $arg =~ s/\n/\\n/g;
+       $arg =~ s/\r/\\r/g;
+       $arg =~ s/\t/\\t/g;
+       $arg = "\$'$arg'";
+    }
+    return "@$args";
+}
+

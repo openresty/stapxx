@@ -10,7 +10,8 @@ global exec_elapsed
 global stats
 global filter_begin
 
-probe @pfunc(ngx_http_process_request)
+probe @pfunc(ngx_http_lua_ssl_cert_by_chunk)?,
+      @pfunc(ngx_http_process_request)
 {
     active_reqs[$r] = 1
 }
@@ -53,7 +54,8 @@ probe @pfunc(ngx_http_lua_run_thread).return,
     }
 }
 
-probe @pfunc(ngx_http_free_request)
+probe @pfunc(ngx_http_free_request),
+      @pfunc(ngx_http_lua_free_fake_request)
 {
     r = $r
     elapsed = exec_elapsed[r]

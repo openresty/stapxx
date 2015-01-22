@@ -1532,8 +1532,7 @@ Used connections: 2
 
 ====== FILES ======
 Max files: 1024
-Open files: 2
-Free files: 1022
+Open normal files: 2
 
 # try another worker process
 $ ngx-count-conns.sxx -x 32743
@@ -1546,8 +1545,7 @@ Used connections: 5094
 
 ====== FILES ======
 Max files: 131072
-Open files: 2
-Free files: 131070
+Open normal files: 2
 ```
 
 [Back to TOC](#table-of-contents)

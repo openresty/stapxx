@@ -30,12 +30,7 @@ probe @pfunc(ngx_process_events_and_timers), @pfunc(ngx_http_handler)
             n += $*part->nelts
         }
 
-        printf("Open files: %d\n", $*cycle->open_files->part->nelts)
-
-        if (lim) {
-            printf("Free files: %d\n", lim - n)
-        }
-
+        printf("Open normal files: %d\n", $*cycle->open_files->part->nelts)
         exit()
     }
 }

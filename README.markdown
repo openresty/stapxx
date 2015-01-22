@@ -49,6 +49,7 @@ Table of Contents
     * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
     * [lj-str-tab](#lj-str-tab)
     * [func-latency-distr](#func-latency-distr)
+    * [ngx-count-conns](#ngx-count-conns)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1469,7 +1470,7 @@ $ export PATH=$PWD:$PATH
 
 # assuming the target process has the pid 3781.
 
-$ func-latency-distr.sxx -x 3781 --arg func='process("$^libluajit_path").function("lj_str_new")'
+$ ./samples/func-latency-distr.sxx -x 3781 --arg func='process("$^libluajit_path").function("lj_str_new")'
 Start tracing 18356 (/opt/nginx/sbin/nginx)
 Hit Ctrl-C to end.
 ^C
@@ -1507,6 +1508,46 @@ max/avg/min: 545751/28313/1761
  524288 |                                                     1
 1048576 |                                                     0
 2097152 |                                                     0
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-count-conns
+---------------
+
+Count the number of used nginx connections and open files in the specified nginx worker process.
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 6259.
+$ ./samples/ngx-count-conns -x 6259
+Start tracing 6259 (/opt/nginx/sbin/nginx)...
+
+====== CONNECTIONS ======
+Max connections: 1024
+Free connections: 1022
+Used connections: 2
+
+====== FILES ======
+Max files: 1024
+Open files: 2
+Free files: 1022
+
+# try another worker process
+$ ngx-count-conns.sxx -x 32743
+Start tracing 32743 (/opt/nginx/sbin/nginx)...
+
+====== CONNECTIONS ======
+Max connections: 32768
+Free connections: 27674
+Used connections: 5094
+
+====== FILES ======
+Max files: 131072
+Open files: 2
+Free files: 131070
 ```
 
 [Back to TOC](#table-of-contents)

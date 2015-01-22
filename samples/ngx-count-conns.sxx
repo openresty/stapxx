@@ -1,0 +1,45 @@
+#!/usr/bin/env stap++
+
+/* Copyright (C) Simon Eskildsen
+ * Copyright (C) Yichun Zhang
+ * */
+
+probe @pfunc(ngx_process_events_and_timers), @pfunc(ngx_http_handler)
+{
+    if (pid() == target()) {
+        $*cycle := @var("ngx_cycle@ngx_cycle.c")
+
+        println("\n====== CONNECTIONS ======")
+
+        printf("Max connections: %d\n", $*cycle->connection_n)
+        printf("Free connections: %d\n", $*cycle->free_connection_n)
+        printf("Used connections: %d\n", $*cycle->connection_n - $*cycle->free_connection_n)
+
+        println("\n====== FILES ======")
+
+        lim = $*cycle->files_n;
+        if (lim == 0) {
+            lim = task_rlimit_nofile(task_current())
+        }
+
+        printf("Max files: %d\n", lim)
+
+        n = $*cycle->open_files->part->nelts
+        $*part := @cast(part, "ngx_list_part_t")
+        for (part = $*cycle->open_files->part->next; part; part = $*part->next) {
+            n += $*part->nelts
+        }
+
+        printf("Open files: %d\n", $*cycle->open_files->part->nelts)
+
+        if (lim) {
+            printf("Free files: %d\n", lim - n)
+        }
+
+        exit()
+    }
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\n", target())
+}

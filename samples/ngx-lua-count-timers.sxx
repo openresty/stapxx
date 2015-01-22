@@ -1,0 +1,27 @@
+#!/usr/bin/env stap++
+
+/* Copyright (C) Simon Eskildsen
+ * Copyright (C) Yichun Zhang
+ * */
+
+@use nginx.lua
+
+probe @pfunc(ngx_process_events_and_timers),
+      @pfunc(ngx_http_handler),
+      @pfunc(ngx_http_lua_timer_handler)
+{
+    if (pid() == target()) {
+        lmcf = ngx_lua_cycle_get_main_conf()
+        $*lmcf := @cast(lmcf, "ngx_http_lua_main_conf_t")
+
+        println("Running timers: ", $*lmcf->running_timers)
+        println("Max running timers: ", $*lmcf->max_running_timers)
+        println("Pending timers: ", $*lmcf->pending_timers)
+        println("Max pending timers: ", $*lmcf->max_pending_timers)
+        exit()
+    }
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\n", target())
+}

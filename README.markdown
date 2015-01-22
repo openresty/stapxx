@@ -50,6 +50,7 @@ Table of Contents
     * [lj-str-tab](#lj-str-tab)
     * [func-latency-distr](#func-latency-distr)
     * [ngx-count-conns](#ngx-count-conns)
+    * [ngx-lua-count-timers](#ngx-lua-count-timers)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1546,6 +1547,26 @@ Used connections: 5094
 ====== FILES ======
 Max files: 131072
 Open normal files: 2
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-count-timers
+--------------------
+
+Outputs the current timer statistics in the nginx worker process specified.
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 13982.
+$ ./samples/ngx-lua-count-timers.sxx -x 13982
+Start tracing 13982 (/opt/nginx/sbin/nginx)...
+Running timers: 0
+Max running timers: 256
+Pending timers: 1
+Max pending timers: 1024
 ```
 
 [Back to TOC](#table-of-contents)

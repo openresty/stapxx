@@ -50,6 +50,7 @@ Table of Contents
     * [lj-str-tab](#lj-str-tab)
     * [func-latency-distr](#func-latency-distr)
     * [ngx-count-conns](#ngx-count-conns)
+    * [ngx-count-conns](#ngx-lua-count-timers)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1546,6 +1547,31 @@ Used connections: 5094
 ====== FILES ======
 Max files: 131072
 Open normal files: 2
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-count-timers
+---------------
+
+Count the [number of
+timers](https://github.com/openresty/lua-nginx-module#ngxtimerat) running and
+pending in nginx. This is useful to help measure a good value for
+[lua_max_pending_timers](https://github.com/openresty/lua-nginx-module#lua_max_pending_timers)
+and
+[lua_max_running_timers](https://github.com/openresty/lua-nginx-module#lua_max_running_timers).
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 6259.
+$ ./samples/ngx-lua-count-timers.sxx -x 6259
+Start tracing 6259 (/usr/sbin/nginx)
+Running timers: 26
+Max running timers: 256
+Pending timers: 59
+Max pending timers: 1024
 ```
 
 [Back to TOC](#table-of-contents)

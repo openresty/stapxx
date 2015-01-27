@@ -51,6 +51,7 @@ Table of Contents
     * [func-latency-distr](#func-latency-distr)
     * [ngx-count-conns](#ngx-count-conns)
     * [ngx-lua-count-timers](#ngx-lua-count-timers)
+    * [cpu-hogs](#cpu-hogs)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1568,6 +1569,58 @@ Max running timers: 256
 Pending timers: 1
 Max pending timers: 1024
 ```
+
+[Back to TOC](#table-of-contents)
+
+cpu-hogs
+--------
+
+This tool can measure how CPU time is distributed across all the running processes (and kernel threads), showing the biggest hogs.
+
+For example, on a quite idle system, you can see a lot of "swapper" task shown on the list:
+
+```
+# cpu-hogs.sxx 
+Tracing the whole system...
+Hit Ctrl-C to end.
+^C
+nginx-frontend 9%
+nginx-backend 4%
+swapper/15 3%
+swapper/23 3%
+swapper/19 3%
+swapper/12 3%
+swapper/0 3%
+swapper/13 3%
+swapper/21 3%
+swapper/16 3%
+swapper/8 3%
+swapper/5 3%
+pdns 3%
+...
+```
+
+while on a relatively busy system, we may get something like this:
+
+```
+cpu-hogs.sxx --arg time=30
+Tracing the whole system...
+Please wait for 30 seconds...
+
+nginx-frontend 52%
+nginx-backend 15%
+nginx-sslgate 6%
+nginx-waf 5%
+ktserver 2%
+pdns 2%
+swapper/0 1%
+ktfs 1%
+syslog-ng 1%
+fancy-scheduler 1%
+rh-reader 0%
+```
+
+Please note that 52% here, for example, means 52% of all of the CPU time actually *used*, instead of the total CPU capacity. Do not get confused.
 
 [Back to TOC](#table-of-contents)
 

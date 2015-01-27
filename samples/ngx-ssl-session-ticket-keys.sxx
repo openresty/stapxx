@@ -6,7 +6,7 @@
 @use openssl
 
 probe begin {
-    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
+    printf("Tracing process %d ($^exec_path).\nExit on first capture. Or hit Ctrl-C to end.\n", target())
 }
 
 // print 16-byte key name
@@ -19,33 +19,11 @@ function print_key_name(name) {
     printf("\n")
 }
 
-// print 16-byte aes state
-function print_key_aes(state) {
-    printf("key aes state: ");
-    $*s := @cast(state, "unsigned char", "$^exec_path")
-    for (i=0; i<16; i++) {
-       printf("%02x", $*s[i])
-    }
-    printf("\n")
-}
-
-// print 16-byte hmac state
-function print_key_hmac(state) {
-    printf("key hmac state: ");
-    $*s := @cast(state, "unsigned char", "$^exec_path")
-    for (i=0; i<16; i++) {
-       printf("%02x", $*s[i])
-    }
-    printf("\n")
-}
-
 // print session ticket content
 function print_session_ticket_key(key) {
     $*k := @cast(key, "ngx_ssl_session_ticket_key_t", "$^exec_path")
     print_key_name($*k->name)
-    // should disable by default the two calls below to maintain key confidentiality.
-    print_key_aes($*k->aes_key)
-    print_key_hmac($*k->hmac_key)
+    // could be extended to print out other cipher states
 }
 
 probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
@@ -62,13 +40,18 @@ probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
 
         } else {
             key_ptr = get_ngx_array_elts(keys)
-            enc_key = key_ptr
-            last_key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t", "$^exec_path")[keys_len-1]
             printf("keys len %d\n", keys_len)
-            printf("enc key:\n")
-            print_session_ticket_key(enc_key)
-            printf("last dec key:\n")
-            print_session_ticket_key(last_key)
+            for (i=0; i<keys_len; i++) {
+                key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t",
+                             "$^exec_path")[i]
+                if (i == 0) {
+                    printf("enc key:\n")
+                } else {
+                    printf("dec key:\n")
+                }
+                print_session_ticket_key(key)
+            }
         }
     }
+    exit()
 }

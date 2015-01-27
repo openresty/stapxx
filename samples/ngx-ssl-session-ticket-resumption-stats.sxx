@@ -8,7 +8,12 @@ global resumed
 global reencrypted
 
 probe begin {
-    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
+    printf("Tracing process %d ($^exec_path).\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
 }
 
 probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
@@ -21,11 +26,17 @@ probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
     }
 }
 
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)
+
 probe end {
     printf("Stop tracing NGX OPENSSL ticket key callback\n");
     printf("Total sessions: %d\n", total);
     printf("Total session tickets: %d\n", tickets);
-    printf("Total resumed session: %d\n", resumed);
+    printf("Total resumed session ticket: %d\n", resumed);
     printf("Total re-encrypted session ticket: %d\n", reencrypted);
 
     if (total > 0) {
@@ -41,7 +52,9 @@ probe end {
     } else {
         ratio2 = 0;
     }
-    printf("Session resumption attempts ratio: %d percent\n", ratio1)
-    printf("Session resumption success ratio: %d percent\n", ratio2)
+    printf("Session ticket resumption attempts ratio: %d percent\n", ratio1)
+    printf("Session ticket resumption success ratio: %d percent\n", ratio2)
+    printf("Total session ticket resumption rate: %d percent\n",
+           ratio1 * ratio2 / 100)
     exit();
 }

@@ -49,7 +49,7 @@ Table of Contents
     * [zlib-deflate-chunk-size](#zlib-deflate-chunk-size)
     * [lj-str-tab](#lj-str-tab)
     * [ngx-ssl-session-ticket-keys](#ngx-ssl-session-ticket-keys)
-    * [ngx-ssl-session-resumption-stats](#ngx-ssl-session-resumption-stats)
+    * [ngx-ssl-session-ticket-resumption-stats](#ngx-ssl-session-ticket-resumption-stats)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1462,7 +1462,9 @@ Analyzing the structure and various statistics of the global Lua string hash tab
 ngx-ssl-session-ticket-keys
 ----------
 
-Dumping ssl session ticket keys of a nginx worker.
+Dumping ssl session ticket keys of a nginx worker. It will exit on the first
+time it captures the ticket keys. It can be utilized as a cron job to monitor if
+session ticket rotation actually happends.
 
 ```bash
 # making the ./stap++ tool visible in PATH:
@@ -1470,21 +1472,49 @@ $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 3781.
 $ ./samples/ngx-ssl-session-ticket-keys.sxx -x 3781
+Tracing process 3781 (/etc/nginx/sbin/nginx).
+Exit on first capture. Or hit Ctrl-C to end.
+keys len 3
+enc key:
+key name: 5589398e87a104dd30691fbc3c8446c6
+dec key:
+key name: f14c1d6611ad4802eccf6332f3b356f5
+dec key:
+key name: b9cb4fb269a4148cc7c19c71d9e8554d
 ```
 
 [Back to TOC](#table-of-contents)
 
-ngx-ssl-session-resumption-stats
+ngx-ssl-session-ticket-resumption-stats
 ----------
 
 Analyzing the statistics of nginx SSL/TLS session ticket resumption.
+It counts the total number of session ticket encryption/decryption events
+Then it calculates the ratio of session ticket resumption attempts versus
+session ticket eligible connections and the ratio of successful session ticket
+resumption versus total number of session ticket resumption attemtps. Finally,
+it calculates the session ticket resumption rate as the product of the above
+two ratio.
+
+Here is an example on monitoring session ticket resumption statistics
+on a local nginx instance for 30 seconds.
 
 ```bash
 # making the ./stap++ tool visible in PATH:
 $ export PATH=$PWD:$PATH
 
 # assuming one nginx worker process has the pid 3781.
-$ ./samples/ngx-ssl-session-resumption-stats.sxx -x 3781
+$ ./samples/ngx-ssl-session-ticket-resumption-stats.sxx -x 3781 --arg time=30
+Tracing process 3781 (/etc/nginx/sbin/nginx).
+Pleasese wait for 30 seconds...
+Stop tracing NGX OPENSSL ticket key callback
+Total sessions: 11
+Total session tickets: 10
+Total resumed session ticket: 10
+Total re-encrypted session ticket: 0
+Session ticket resumption attempts ratio: 90 percent
+Session ticket resumption success ratio: 100 percent
+Total session ticket resumption rate: 90 percent
 ```
 
 [Back to TOC](#table-of-contents)

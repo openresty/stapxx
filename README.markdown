@@ -1474,13 +1474,13 @@ $ export PATH=$PWD:$PATH
 $ ./samples/ngx-ssl-session-ticket-keys.sxx -x 3781
 Tracing process 3781 (/etc/nginx/sbin/nginx).
 Exit on first capture. Or hit Ctrl-C to end.
-keys len 3
-enc key:
-key name: 5589398e87a104dd30691fbc3c8446c6
-dec key:
-key name: f14c1d6611ad4802eccf6332f3b356f5
-dec key:
-key name: b9cb4fb269a4148cc7c19c71d9e8554d
+Number of keys: 3
+encryption key:
+        name: 5589398e87a104dd30691fbc3c8446c6
+decryption key #1:
+        name: f14c1d6611ad4802eccf6332f3b356f5
+decryption key #2:
+        name: b9cb4fb269a4148cc7c19c71d9e8554d
 ```
 
 [Back to TOC](#table-of-contents)
@@ -1512,9 +1512,9 @@ Total sessions: 11
 Total session tickets: 10
 Total resumed session ticket: 10
 Total re-encrypted session ticket: 0
-Session ticket resumption attempts ratio: 90 percent
-Session ticket resumption success ratio: 100 percent
-Total session ticket resumption rate: 90 percent
+Session ticket resumption attempts ratio: 90%
+Session ticket resumption success ratio: 100%
+Total session ticket resumption rate: 90%
 ```
 
 [Back to TOC](#table-of-contents)

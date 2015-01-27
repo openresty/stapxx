@@ -11,7 +11,7 @@ probe begin {
 
 // print 16-byte key name
 function print_key_name(name) {
-    printf("key name: ");
+    printf("\tname: ");
     $*n := @cast(name, "unsigned char", "$^exec_path")
     for (i=0; i<16; i++) {
        printf("%02x", $*n[i])
@@ -40,14 +40,14 @@ probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
 
         } else {
             key_ptr = get_ngx_array_elts(keys)
-            printf("keys len %d\n", keys_len)
+            printf("Number of keys: %d\n", keys_len)
             for (i=0; i<keys_len; i++) {
                 key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t",
                              "$^exec_path")[i]
                 if (i == 0) {
-                    printf("enc key:\n")
+                    printf("encryption key:\n")
                 } else {
-                    printf("dec key:\n")
+                    printf("decryption key #%d:\n", i)
                 }
                 print_session_ticket_key(key)
             }

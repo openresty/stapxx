@@ -52,9 +52,9 @@ probe end {
     } else {
         ratio2 = 0;
     }
-    printf("Session ticket resumption attempts ratio: %d percent\n", ratio1)
-    printf("Session ticket resumption success ratio: %d percent\n", ratio2)
-    printf("Total session ticket resumption rate: %d percent\n",
+    printf("Session ticket resumption attempts ratio: %d%%\n", ratio1)
+    printf("Session ticket resumption success ratio: %d%%\n", ratio2)
+    printf("Total session ticket resumption rate: %d%%\n",
            ratio1 * ratio2 / 100)
     exit();
 }

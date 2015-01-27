@@ -1,6 +1,9 @@
 // module luajit
 
 
+@use nginx.lua
+
+
 $*pt := @cast(pt, "GCproto", "$^libluajit_path")
 
 
@@ -8,6 +11,7 @@ $*pt := @cast(pt, "GCproto", "$^libluajit_path")
 @define LJ_TLIGHTUD  %( 4294901760 %)
 @define LJ_TSTR  %( 4294967291 %)
 @define LJ_TUDATA  %( 4294967283 %)
+@define LJ_TFUNC  %( 4294967287 %)
 
 
 @define TSTR    %( 4 %)
@@ -663,6 +667,33 @@ function luajit_trace_starting_func(g, trace)
     path = luajit_unbox_gcstr(name)
 
     return sprintf("%s:%d", path, firstline)
+}
+
+
+function luajit_print_backtrace(simple)
+{
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
+    if (mL == 0) {
+        return ""
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return ""
+    }
+
+    L = luajit_cur_thread(g)
+    if (L == 0) {
+        return ""
+    }
+
+    return luajit_backtrace(L, g, simple)
 }
 
 

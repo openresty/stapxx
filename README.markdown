@@ -52,6 +52,7 @@ Table of Contents
     * [ngx-count-conns](#ngx-count-conns)
     * [ngx-lua-count-timers](#ngx-lua-count-timers)
     * [cpu-hogs](#cpu-hogs)
+    * [cpu-robbers](#cpu-robbers)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1580,7 +1581,10 @@ This tool can measure how CPU time is distributed across all the running process
 For example, on a quite idle system, you can see a lot of "swapper" task shown on the list:
 
 ```
-# cpu-hogs.sxx 
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# ./samples/cpu-hogs.sxx
 Tracing the whole system...
 Hit Ctrl-C to end.
 ^C
@@ -1621,6 +1625,35 @@ rh-reader 0%
 ```
 
 Please note that 52% here, for example, means 52% of all of the CPU time actually *used*, instead of the total CPU capacity. Do not get confused.
+
+[Back to TOC](#table-of-contents)
+
+cpu-robbers
+-----------
+
+Display how frequently other processes (including user proceses and kernel threads) preempt
+the target process specified by its PID (that is, stealing CPU time from the target process).
+Only ouptut the biggest robbers.
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process's pid is 13443
+$ ./samples/cpu-robbers.sxx -x 13443
+Start tracing process 13443 (/opt/nginx/sbin/nginx)...
+Hit Ctrl-C to end.
+^C
+#1 pdns: 23% (32 samples)
+#2 ksoftirqd/17: 20% (28 samples)
+#3 unbound: 8% (11 samples)
+#4 nginx-sslgateway: 7% (10 samples)
+#5 nginx-backend: 6% (9 samples)
+#6 kworker/17:1: 5% (7 samples)
+#7 kworker/17:1H: 3% (5 samples)
+#8 rcuos/4: 2% (4 samples)
+#9 rcuos/23: 2% (3 samples)
+```
 
 [Back to TOC](#table-of-contents)
 

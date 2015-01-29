@@ -1655,6 +1655,9 @@ Hit Ctrl-C to end.
 #9 rcuos/23: 2% (3 samples)
 ```
 
+This tool is very general and can be used upon any process, *not*
+need to be an nginx process at all.
+
 [Back to TOC](#table-of-contents)
 
 Installation

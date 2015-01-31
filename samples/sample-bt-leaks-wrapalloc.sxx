@@ -1,0 +1,79 @@
+#!/usr/bin/env stap++
+
+# Copyright (C) Yichun Zhang (agentzh)
+# this requires using wrapalloc.so in the wrapalloc
+# project (https://github.com/agentzh/wrapalloc)
+# to LD_PRELOAD your application before using this tool.
+
+global ptr2bt
+global ptr2size
+global bt_stats
+global quit
+
+probe begin
+{
+    warn(sprintf("Start tracing %d ($^exec_path)...", target()))
+    warn("Wait for $^arg_time :default(10) sec to complete.\n")
+}
+
+function handle_quit()
+{
+    foreach (bt in bt_stats) {
+        print_ustack(bt)
+        printf("\t%d\n", @sum(bt_stats[bt]))
+    }
+
+    exit()
+}
+
+function free_ptr(ptr)
+{
+    if (quit) {
+        handle_quit()
+
+    } else {
+        bt = ptr2bt[ptr]
+        delete ptr2bt[ptr]
+
+        bytes = ptr2size[ptr]
+        delete ptr2size[ptr]
+
+        bt_stats[bt] <<< -bytes
+        if (@sum(bt_stats[bt]) == 0) {
+            delete bt_stats[bt]
+        }
+    }
+}
+
+function alloc_size(ptr, size)
+{
+    if (quit) {
+        handle_quit()
+
+    } else {
+        bt = ubacktrace()
+        //warn(sprintf("alloc: %p (bytes %d) %s\n", ptr, size, ubacktrace()))
+        ptr2bt[ptr] = bt
+        ptr2size[ptr] = size
+        bt_stats[bt] <<< size
+    }
+}
+
+probe process("$^libwrapalloc_path").function("probe_alloc_event")
+{
+    //warn(sprintf("probe alloc %p %d\n", $memptr, $bytes))
+    alloc_size($memptr, $bytes)
+}
+
+probe process("$^libwrapalloc_path").function("probe_free_event")
+{
+    //warn(sprintf("probe free %p\n", $memptr))
+    free_ptr($memptr)
+}
+
+probe timer.s($^arg_time)
+{
+    quit = 1
+    delete ptr2bt
+    delete ptr2size
+}

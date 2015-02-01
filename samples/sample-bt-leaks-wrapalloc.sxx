@@ -9,6 +9,7 @@ global ptr2bt
 global ptr2size
 global bt_stats
 global quit
+global free_misses
 
 probe begin
 {
@@ -18,6 +19,10 @@ probe begin
 
 function handle_quit()
 {
+    if (free_misses) {
+        warn(sprintf("free misses: %d", free_misses))
+    }
+
     foreach (bt in bt_stats) {
         print_ustack(bt)
         printf("\t%d\n", @sum(bt_stats[bt]))
@@ -38,9 +43,14 @@ function free_ptr(ptr)
         bytes = ptr2size[ptr]
         delete ptr2size[ptr]
 
-        bt_stats[bt] <<< -bytes
-        if (@sum(bt_stats[bt]) == 0) {
-            delete bt_stats[bt]
+        if (bt == "" && bytes == 0) {
+            free_misses++
+
+        } else {
+            bt_stats[bt] <<< -bytes
+            if (@sum(bt_stats[bt]) == 0) {
+                delete bt_stats[bt]
+            }
         }
     }
 }

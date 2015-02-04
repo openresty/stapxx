@@ -1584,7 +1584,7 @@ For example, on a quite idle system, you can see a lot of "swapper" task shown o
 # making the ./stap++ tool visible in PATH:
 $ export PATH=$PWD:$PATH
 
-# ./samples/cpu-hogs.sxx
+$ ./samples/cpu-hogs.sxx
 Tracing the whole system...
 Hit Ctrl-C to end.
 ^C
@@ -1607,7 +1607,7 @@ pdns 3%
 while on a relatively busy system, we may get something like this:
 
 ```
-cpu-hogs.sxx --arg time=30
+$ cpu-hogs.sxx --arg time=30
 Tracing the whole system...
 Please wait for 30 seconds...
 

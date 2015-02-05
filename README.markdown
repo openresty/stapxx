@@ -53,6 +53,8 @@ Table of Contents
     * [ngx-lua-count-timers](#ngx-lua-count-timers)
     * [cpu-hogs](#cpu-hogs)
     * [cpu-robbers](#cpu-robbers)
+    * [ngx-pcre-dist](#ngx-pcre-dist)
+    * [ngx-pcre-top](#ngx-pcre-top)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1657,6 +1659,110 @@ Hit Ctrl-C to end.
 
 This tool is very general and can be used upon any process, *not*
 need to be an nginx process at all.
+
+[Back to TOC](#table-of-contents)
+
+ngx-pcre-dist
+--------
+This tool can analyse the PCRE regex executation time distribution.
+
+It requires uretprobes support in the Linux kernel.
+
+Also, you need to ensure that debug symbols are enabled in your Nginx build, PCRE build, and LuaJIT build. For example, if you build PCRE from source with your Nginx or OpenResty by specifying the `--with-pcre=PATH` option, then you should also specify the `--with-pcre-opt=-g` option at the same time.
+
+You can analyze the distribution of the length of those subject string data being matched in individual runs. Note that, the time is given in microseconds (us), i.e., 1e-6 seconds.
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 6440.
+$ ./samples/ngx-pcre-dist.sxx -x 6440
+Start tracing 6440 (/opt/nginx/sbin/nginx)
+Hit Ctrl-C to end.
+^C
+Logarithmic histogram for data length distribution (byte) for 195 samples:
+(min/avg/max: 7/65/90)
+Logarithmic histogram for data length distribution:
+value |-------------------------------------------------- count
+    1 |                                                     0
+    2 |                                                     0
+    4 |@@@@@@                                              18
+    8 |@@@@@@@                                             22
+   16 |@@@@@@@@                                            24
+   32 |                                                     0
+   64 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@        131
+  128 |                                                     0
+  256 |                                                     0
+```
+
+Below is an example that analyzes the PCRE regex executation time distribution for a given Nginx worker process. The `--arg exec_time=1` option is used here.
+
+```
+# assuming the target process has the pid 6440.
+$ ./samples/ngx-pcre-dist.sxx -x 6440 --arg exec_time=1
+Start tracing 6440 (/opt/nginx/sbin/nginx)
+Hit Ctrl-C to end.
+^C
+Logarithmic histogram for pcre_exec running time distribution (us) for 135 sample:
+(min/avg/max: 11/18/164)
+value |-------------------------------------------------- count
+    2 |                                                    0
+    4 |                                                    0
+    8 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   97
+   16 |@@@@@@@@@@@                                        23
+   32 |@@@@@@                                             12
+   64 |@                                                   2
+  128 |                                                    1
+  256 |                                                    0
+  512 |                                                    0
+```
+Using `--arg utime=1` option can increase the accuracy of time, but it may not be supported on some platforms.
+This tool supports both the ngx_lua classic API and the lua-resty-core API.
+
+[Back to TOC](#table-of-contents)
+
+ngx-pcre-top
+--------
+This tool can analyze the worst or accumulated PCRE executation time of the individual regex matches using the ngx_lua module's [ngx.re API](http://wiki.nginx.org/HttpLuaModule#ngx.re.match).
+
+Here is an example that analyzes the longest total running time, using accumulated regex execution time:
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 6440.
+$ ./samples/ngx-pcre-top.sxx --skip-badvars -x 6440
+Start tracing 6440 (/opt/nginx/sbin/nginx)...
+ Hit Ctrl-C to end.
+^C
+Top N regexes with longest total running time:
+1. pattern ".": 241038us (total data size: 330110)
+2. pattern "elloA": 188107us (total data size: 15365120)
+3. pattern "b": 28016us (total data size: 36012)
+4. pattern "ello": 26241us (total data size: 15005)
+5. pattern "a": 26180us (total data size: 36012o)
+```
+
+Below is an example that analyzes the worst execution time of the individual regex matches. The `--arg worst_time=1` option is used here.
+
+```
+# assuming the target process has the pid 6440.
+$ ./samples/ngx-pcre-top.sxx --skip-badvars -x 6440 --arg worst_time=1
+Start tracing 6440 (/opt/nginx/sbin/nginx)
+Hit Ctrl-C to end.
+^C
+Top N regexes with worst running time:
+1. pattern "elloA": 125us (data size: 5120)
+2. pattern ".": 76us (data size: 10)
+3. pattern "a": 64us (data size: 12)
+4. pattern "b": 29us (data size: 12)
+5. pattern "ello": 26us (data size: 5)
+```
+Note that the time values given above are just for individual runs and are not accumulated.
+Using `--arg utime=1` option can increase the accuracy of time, but it may not be supported on some platforms.
+This tool supports both the ngx_lua classic API and the lua-resty-core API.
 
 [Back to TOC](#table-of-contents)
 

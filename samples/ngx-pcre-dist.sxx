@@ -1,0 +1,81 @@
+#!/usr/bin/env stap++
+
+@define now %(
+    %( "$^arg_utime :default()" != "" %?
+    cputime_to_usecs(task_utime())
+    %:
+	gettimeofday_us()
+    %)
+%)
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_exec_time :default()" != "" %?
+global begin
+global exectimes
+
+probe process("$^libpcre_path").function("pcre_exec")
+{
+    if (target() == pid()) {
+        begin = @now
+    }
+}
+
+probe process("$^libpcre_path").function("pcre_exec").return{
+    if (target() == pid() && begin) {
+        elapsed = @now - begin
+        exectimes <<< elapsed
+    }
+}
+
+probe end
+{
+    if (!begin) {
+        println("\nNo pcre_exec() calls found so far.")
+
+    } else {
+        printf("\nLogarithmic histogram for pcre_exec running time distribution (us) for %d sample:\n", @count(exectimes))
+        printf("(min/avg/max: %d/%d/%d)\n", @min(exectimes), @avg(exectimes), @max(exectimes))
+        print(@hist_log(exectimes))
+    }
+}
+
+%:
+
+global datalens
+global found
+
+probe process("$^libpcre_path").function("pcre_exec")
+{
+    if (target() == pid()) {
+        found = 1
+        datalens <<< $length
+        //printf("len: %d, ofs: %d", $length, $start_offset)
+    }
+}
+
+probe end
+{
+    if (!found) {
+        println("\nNo pcre_exec() calls found so far.")
+
+    } else {
+        printf("\nLogarithmic histogram for data length distribution (byte) for %d samples:\n", @count(datalens))
+        printf("(min/avg/max: %d/%d/%d)\n", @min(datalens), @avg(datalens), @max(datalens))
+        print(@hist_log(datalens))
+    }
+}
+%)
+
+%("$^arg_time" != "" %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

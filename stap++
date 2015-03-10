@@ -347,7 +347,7 @@ sub find_dso_path {
     my $found_path;
     for my $path (sort keys %DSOs) {
         #warn "checking $path against $pat";
-        if ($path =~ m{\blib\Q$name(?:[-.\d])?\E\.so(?:\.\d+)*$}) {
+        if ($path =~ m{\blib\Q$name\E[-.\d]*\.so(?:\.\d+)*$}) {
             $LibPaths{$pat} = $path;
             $found_path = $path;
             warn "Found exact match for $pat: $path\n";

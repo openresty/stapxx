@@ -10,6 +10,9 @@
 @define NGX_HTTP_MOVE        %( 0x0100 %)
 @define NGX_HTTP_OPTIONS     %( 0x0200 %)
 
+@define AF_UNIX              %( 1 %)
+@define AF_INET6             %( 10 %)
+
 function ngx_req_method(r)
 {
     $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
@@ -109,4 +112,35 @@ function ngx_req_ua(r)
         return user_string_n_warn($*ua->value->data, len)
     }
     return ""
+}
+
+
+function ngx_req_remote_addr(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    len = $*r->connection->addr_text->len
+    if (len == 0) {
+        return ""
+    }
+    return user_string_n_warn($*r->connection->addr_text->data, len)
+}
+
+
+function ngx_req_remote_port(r)
+{
+    $*r := @cast(r, "ngx_http_request_t", "$^exec_path")
+    sockaddr = $*r->connection->sockaddr
+    sa_family = $*r->connection->sockaddr->sa_family
+    if (sa_family == @AF_INET6) {
+        $*sockaddr_in6 := @cast(sockaddr, "sockaddr_in6")
+        return ntohs($*sockaddr_in6->sin6_port)
+        // return 0
+    }
+
+    if (sa_family == @AF_UNIX) {
+        return 0
+    }
+
+    $*sockaddr_in := @cast(sockaddr, "sockaddr_in", "$^exec_path")
+    return ntohs($*sockaddr_in->sin_port)
 }

@@ -998,6 +998,22 @@ using this tool in production. Only use this tool in production when you really 
 
 Please note that the `realloc` function in some builds of glibc may not have correct argument values, so you *may* see false positives on code paths doing `realloc`.
 
+If you are seeing the systemtap error
+
+```
+ERROR: Array overflow, check MAXMAPENTRIES near identifiter ...
+```
+
+then you should increase the number in the `-D MAXMAPENTRIES=10000` command-line option.
+
+If you are seeing the error
+
+```
+ERROR: probe overhead exceeded threshold
+```
+
+then you should specify the `-D STP_NO_OVERLOAD` command-line option.
+
 You can find more details on Memory Leak Flame Graphs in Brendan Gregg's blog post:
 
 http://dtrace.org/blogs/brendan/2013/08/16/memory-leak-growth-flame-graphs/

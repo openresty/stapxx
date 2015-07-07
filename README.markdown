@@ -389,7 +389,7 @@ For now, it just prints out the total memory currently allocated in the LuaJIT G
 ngx-lj-gc-objs
 --------------
 
-This tool has been renamed to [lj-vm-states](#lj-gc-objs) because it is no longer specific to Nginx.
+This tool has been renamed to [lj-gc-objs](#lj-gc-objs) because it is no longer specific to Nginx.
 
 [Back to TOC](#table-of-contents)
 

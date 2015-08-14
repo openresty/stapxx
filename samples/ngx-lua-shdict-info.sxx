@@ -1,0 +1,132 @@
+#!/usr/bin/env stap++
+
+
+probe @pfunc(ngx_process_events_and_timers)
+{
+    if (pid() == target()) {
+
+        found = 0
+        begin = local_clock_us()
+
+        pagesize = @var("ngx_pagesize@ngx_alloc.c")
+        part = &@var("ngx_cycle@ngx_cycle.c")->shared_memory->part
+        $*part := @cast(part, "ngx_list_part_t")
+        zone = $*part->elts
+        for (i = 0; ; i++) {
+            if (i >= $*part->nelts) {
+                if ($*part->next == 0) {
+                    println("no next")
+                    break
+                }
+
+                part = $*part->next
+                zone = $*part->elts
+                i = 0
+            }
+
+            $*zone := @cast(zone, "ngx_shm_zone_t")
+
+            ctx = $*zone[i]->data
+            $*ctx := @cast(ctx, "ngx_http_lua_shdict_ctx_t", "$^exec_path")
+
+            zone_name = user_string_n($*ctx->name->data, $*ctx->name->len)
+            // zone_name = user_string_n($*ctx->name->data, 4)
+
+            // printf("shm zone \"%s\"\n", zone_name)
+
+            if (zone_name != "$^arg_dict") {
+                continue;
+            }
+
+            shm = &$*zone[i]->shm
+
+            $*shm := @cast(shm, "ngx_shm_t")
+
+            init = $*zone[i]->init
+            addr = $*shm->addr
+            $*addr := @cast(addr, "ngx_slab_pool_t")
+            addr2 = $*addr->addr
+
+            if (addr != addr2) {
+                error("shm zone \"" . zone_name . "\" is corrupted or "
+                      . "not yet loaded into the process memory space: "
+                      . "pool != pool->addr "
+                      . sprintf("(pool->addr: %p)", addr2))
+                exit()
+            }
+
+            init_name = usymname(init)
+            owner = str_replace(str_replace(init_name, "_init", ""), "_zone", "")
+
+            printf("shm zone \"%s\"\n", zone_name)
+            printf("    owner: %s\n", owner)
+            printf("    total size: %d KB\n", @cast(shm, "ngx_shm_t")->size / 1024)
+
+            pages = 0
+            free = &$*addr->free
+            $*free := @cast(free, "ngx_slab_page_t")
+            blocks = 0
+
+            for (page = $*free->next;
+                 page && page != free;
+                 page = @cast(page, "ngx_slab_page_t")->next)
+            {
+                //printf("page: %p\n", page)
+                pages += @cast(page, "ngx_slab_page_t")->slab
+                if (++blocks % 1000 == 0) {
+                    printf("    free pages: %d KB (%d pages, %d blocks)\n",
+                           pages * pagesize / 1024, pages, blocks)
+                }
+            }
+
+            printf("    free pages: %d KB (%d pages, %d blocks)\n",
+                   pages * pagesize / 1024, pages, blocks)
+
+            sh = $*ctx->sh
+            $*sh := @cast(sh, "ngx_http_lua_shdict_shctx_t", "$^exec_path")
+
+            node = $*sh->rbtree->root
+            sentinel = $*sh->rbtree->sentinel
+
+            $*node := @cast(node, "ngx_rbtree_node_t")
+
+            height = 0
+            while (node != sentinel) {
+                /*
+                printf("root: %p, sentinel: %p\n", node, sentinel)
+
+                sd = &node->color
+                $*sd := @cast(sd, "ngx_http_lua_shdict_node_t")
+
+                key_name = user_string_n($*sd->data, $*sd->key_len)
+                printf("key name: \"%s\"\n", key_name)
+                */
+
+                if ($*node->color == 0) {
+                    height++
+                }
+                node = $*node->left
+            }
+
+            printf("    rbtree black height: %d\n", height)
+
+            found = 1
+            break
+        }
+
+        if (!found) {
+            printf("shm zone \"%s\" not found.\n", "$^arg_dict")
+        }
+
+        elapsed = local_clock_us() - begin
+        printf("\n%d microseconds elapsed in the probe handler.\n", elapsed)
+
+        exit()
+
+    } /* pid() == target() */
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n", target())
+}

@@ -38,6 +38,7 @@ Table of Contents
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
     * [ngx-lua-shdict-writes](#ngx-lua-shdict-writes)
+    * [ngx-lua-shdict-info](#ngx-lua-shdict-info)
     * [ngx-single-req-latency](#ngx-single-req-latency)
     * [ngx-rewrite-latency-distr](#ngx-rewrite-latency-distr)
     * [ngx-lua-exec-time](#ngx-lua-exec-time)
@@ -1073,6 +1074,34 @@ The `--arg dict=NAME` option can be used to filter writes to a particular shared
     [1383177046] set key=cpage::/cpage/block/ip-ban/171116:748534 value_len=1407861 dict=cpage_cache
     [1383177047] set key=cpage::/cpage/block/basic-sec-captcha/291111:4428016 value_len=7 dict=cpage_cache
     ^C
+```
+
+[Back to TOC](#table-of-contents)
+
+ngx-lua-shdict-info
+-------------------
+
+This tool can be used to analyzes the shared dictionary zone specified by the `--arg dict=name`
+in the specified running nginx process.
+This tool is very similar to [ngx-shm](https://github.com/openresty/nginx-systemtap-toolkit#ngx-shm),
+just one more `rbtree black height`.
+
+Below is an example:
+
+```bash
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    # assuming one nginx worker process has the pid 28723.
+    $ ./samples/ngx-lua-shdict-info.sxx -x 59141 --arg dict=session01
+    Start tracing 59141 (/usr/local/openresty-debug/nginx/sbin/nginx)
+    shm zone "session01"
+        owner: ngx_http_lua_shdict
+        total size: 102400 KB
+        free pages: 76792 KB (19198 pages, 1 blocks)
+        rbtree black height: 11
+
+    26 microseconds elapsed in the probe handler.
 ```
 
 [Back to TOC](#table-of-contents)

@@ -7,7 +7,7 @@ global ets, lts
 
 probe syscall.epoll_ctl {
     if (pid() == target() && $op == @EPOLL_CTL_ADD) {
-        if ($event->events & @EPOLLET) {
+        if (@cast($event, "epoll_event")->events & @EPOLLET) {
             ets++
 
         } else {

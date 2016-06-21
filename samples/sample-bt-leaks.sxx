@@ -49,7 +49,7 @@ probe process("$^libc_path").function("malloc").return,
                 }
             }
 
-            ptr = $return
+            ptr = returnval()
             if (ptr) {
                 // here we use a hack specific to glibc's implementation
                 // to get the size of the memory block because we
@@ -58,7 +58,7 @@ probe process("$^libc_path").function("malloc").return,
                 p = ptr - $*sizeof_size_t
                 size = @cast(p, "size_t")[0] & ~($*sizeof_size_t - 1)
 
-                //printf("alloc: %p (bytes %d)\n", $return, size)
+                //printf("alloc: %p (bytes %d)\n", ptr, size)
                 bt = ubacktrace()
                 ptr2bt[ptr] = bt
                 ptr2size[ptr] = size
@@ -73,9 +73,9 @@ probe process("$^libc_path").function("malloc").return,
 
 probe process("$^libc_path").function("free")
 {
-    if (pid() == target() && $mem) {
-        //printf("free: %p\n", $mem)
-        ptr = $mem
+    ptr = pointer_arg(1)
+    if (pid() == target() && ptr) {
+        //printf("free: %p\n", ptr)
 
         bt = ptr2bt[ptr]
         delete ptr2bt[ptr]

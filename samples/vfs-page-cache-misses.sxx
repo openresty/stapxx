@@ -4,37 +4,46 @@
 # mailing list: https://sourceware.org/ml/systemtap/2011-q2/msg00157.html
 
 global pages, active
-global total_paged
+global total_paged, total_read_bytes
 global miss
 global misses
 
 probe $^arg_probe :default(vfs.read) {
-    if (pid() == target() && (!$^arg_ino :default(0) || ino == $^arg_ino)) {
-        active[tid()] = 1
-        pages[tid()] = 0
+    if (pid() == target() && (!$^arg_inode :default(0) || ino == $^arg_inode)) {
+        tid = tid()
+        active[tid] = 1
+        pages[tid] = 0
+        total_read_bytes += bytes_to_read
     }
 }
 
 probe vfs.add_to_page_cache.return {
-    if (pid() == target() && active[tid()]) {
-        //printf("nrpages: %d, size: %d\n", $mapping->nrpages, size)
-        pages[tid()] += size
-        miss[tid()] = 1
+    if (pid() == target()) {
+        tid = tid()
+
+        if (active[tid]) {
+            pages[tid] += size
+            miss[tid] = 1
+        }
     }
 }
 
 probe $^arg_probe.return {
-    if (pid() == target() && active[tid()]) {
-        active[tid()] = 0
+    if (pid() == target()) {
+        tid = tid()
 
-        total_paged <<< pages[tid()]
+        if (active[tid]) {
+            active[tid] = 0
 
-        if (miss[tid()]) {
-            misses <<< 1
-            miss[tid()] = 0
+            total_paged += pages[tid]
 
-        } else {
-            misses <<< 0
+            if (miss[tid]) {
+                misses <<< 1
+                miss[tid] = 0
+
+            } else {
+                misses <<< 0
+            }
         }
     }
 }
@@ -45,12 +54,20 @@ probe timer.s($^arg_period :default(2)) {
         printf("No $^arg_probe observed in the last $^arg_period seconds.\n")
 
     } else {
-        printf("%d $^arg_probe operations, %d pages added (page size: %dB), page cache miss rate: %d%%\n",
-               total, @sum(total_paged), mem_page_size(),
-               @sum(misses) * 100 / total)
+        missed = @sum(misses)
+        total_read_kb = total_read_bytes / 1024
+        pagesize = mem_page_size()
+        total_paged_kb = total_paged * pagesize / 1024
+
+        printf("%d $^arg_probe operations, %d missed operations, operation miss rate: %d%%\n",
+               total, missed, missed * 100 / total)
+
+        printf("total read %d KB, %d pages added (page size: %dB), size miss rate: %d%%\n",
+               total_read_kb, total_paged, pagesize, total_paged_kb * 100 / total_read_kb)
 
         delete misses
         delete total_paged
+        delete total_read_bytes
     }
 }
 

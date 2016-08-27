@@ -56,6 +56,7 @@ Table of Contents
     * [cpu-robbers](#cpu-robbers)
     * [ngx-pcre-dist](#ngx-pcre-dist)
     * [ngx-pcre-top](#ngx-pcre-top)
+    * [vfs-page-cache-misses](#vfs-page-cache-misses)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1808,6 +1809,33 @@ Top N regexes with worst running time:
 Note that the time values given above are just for individual runs and are not accumulated.
 Using `--arg utime=1` option can increase the accuracy of time, but it may not be supported on some platforms.
 This tool supports both the ngx_lua classic API and the lua-resty-core API.
+
+[Back to TOC](#table-of-contents)
+
+vfs-page-cache-misses
+--------
+This tool can analyze the page cache misses.
+
+It will get the wrong result when the process have some other operators that can trigger `vfs.read` but not read data from disk, like pipeline file read.
+
+The `--arg inode=$inode` option can be used to only analyze the specified inode.
+
+Here is an example:
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+# assuming the target process has the pid 73485.
+$ ./samples/vfs-page-cache-misses.sxx -x 73485 --arg inode=7905
+Tracing 73485...
+Hit Ctrl-C to end.
+
+311 vfs.read operations, 86 missed operations, operation miss rate: 27%
+total read 29425 KB, 3350 pages added (page size: 4096B), size miss rate: 45%
+186 vfs.read operations, 49 missed operations, operation miss rate: 26%
+total read 20373 KB, 1792 pages added (page size: 4096B), size miss rate: 35%
+```
 
 [Back to TOC](#table-of-contents)
 

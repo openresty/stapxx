@@ -1814,11 +1814,15 @@ This tool supports both the ngx_lua classic API and the lua-resty-core API.
 
 vfs-page-cache-misses
 --------
-This tool can analyze the page cache misses.
+This tool can analyze the page cache misses:
 
-It will get the wrong result when the process have some other operators that can trigger `vfs.read` but not read data from disk, like pipeline file read.
+1. operation miss rate: operation num that page cache missed / total operation num.
+2. size miss rate: size not from page cache / total size read.
 
-The `--arg inode=$inode` option can be used to only analyze the specified inode.
+This tool can be use for processes that have multiple thread (not only for nginx process),
+but it will get the wrong result when the process have some other operators that can trigger `vfs.read` but not read data from disk, like pipeline file read.
+
+The `--arg inode=$inode` option can be used to only analyze the specified inode, `$inode` is an inode ID that can get by `ls -i /path/to/file`.
 
 Here is an example:
 

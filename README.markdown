@@ -614,6 +614,8 @@ Interpreted: 0% (1 samples)
 
 This example shows that almost all the CPU time is spent on compiled Lua code, which is a very good sign.
 
+If you see "read faults" errors, they are usually very normal and you can just try specifying the `--skip-badvars` option to ignore them.
+
 [Back to TOC](#table-of-contents)
 
 ngx-lj-trace-exits

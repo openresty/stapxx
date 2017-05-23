@@ -1,0 +1,77 @@
+#!/usr/bin/env stap++
+
+# Capture ssl session tickets.
+@use nginx.array
+@use nginx.ssl_ex_data
+
+probe begin {
+    printf("Start tracing NGX OPENSSL ticket key callback\n")
+}
+
+// print 16-byte key name
+function print_key_name(name) {
+    printf("key name: ");
+    $*n := @cast(name, "unsigned char", "$^exec_path")
+    for (i=0; i<16; i++) {
+       printf("%02x", $*n[i]) 
+    }
+    printf("\n")
+}
+
+// print 16-byte aes state
+function print_key_aes(state) {
+    printf("key aes state: ");
+    $*s := @cast(state, "unsigned char", "$^exec_path")
+    for (i=0; i<16; i++) {
+       printf("%02x", $*s[i]) 
+    }
+    printf("\n")
+}
+
+// print 16-byte hmac state
+function print_key_hmac(state) {
+    printf("key hmac state: ");
+    $*s := @cast(state, "unsigned char", "$^exec_path")
+    for (i=0; i<16; i++) {
+       printf("%02x", $*s[i]) 
+    }
+    printf("\n")
+}
+
+// print session ticket content
+function print_session_ticket_key(key) {
+    $*k := @cast(key, "ngx_ssl_session_ticket_key_t", "$^exec_path")
+    print_key_name($*k->name)
+    // should disable by default the two calls below to maintain key confidentiality.
+    print_key_aes($*k->aes_key)
+    print_key_hmac($*k->hmac_key)
+}
+
+probe @pfunc(ngx_ssl_session_ticket_key_callback).return {
+    keys_index = @var("ngx_ssl_session_ticket_keys_index@src/event/ngx_event_openssl.c")
+    num = get_ssl_ex_data_len($ssl_conn->ctx)
+    if (keys_index > num) {
+        printf("Error: ticket key list is not supported")
+    }
+    else {
+        keys = get_ssl_ex_data_item($ssl_conn->ctx, keys_index)
+        keys_len = get_ngx_array_len(keys)
+        if (keys_len <= 0) {
+            printf("Error: empty key list")
+        } else {
+            key_ptr = get_ngx_array_data_ptr(keys)
+            enc_key = key_ptr
+            last_key = &@cast(key_ptr, "ngx_ssl_session_ticket_key_t", "$^exec_path")[keys_len-1] 
+            printf("keys len %d\n", keys_len)
+            printf("enc key:\n")
+            print_session_ticket_key(enc_key)
+            printf("last dec key:\n")
+            print_session_ticket_key(last_key)
+        }
+    }
+}
+
+probe end {
+    printf("Stop tracing NGX OPENSSL ticket key callback\n")
+    exit()
+}

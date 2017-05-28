@@ -308,6 +308,13 @@ function luajit_jit_state_size(J)
     $*J := @cast(J, "jit_State", "$^libluajit_path")
 
     ir_k64_size = 0
+    // In the newer revision of luajit, 64-bit constants are represented as an
+    // array of TValue. Uncomment following code if the luajit being used
+    // is using linked list to represent 64-bit constants. As the 64-bit
+    // constants don't take lots of memory, it does not seems to be a big deal
+    // if you don't uncomment following code for the older luajit.
+    //
+    /*
     $*k := @cast(k, "K64Array", "$^libluajit_path")
     for (k = $*J->k64->ptr32; k; ) {
         ir_k64_size += @sizeof_K64Array
@@ -316,6 +323,7 @@ function luajit_jit_state_size(J)
     if (ir_k64_size) {
         //printf("64-bit constants: %d\n", ir_k64_size)
     }
+    */
 
     sizesnapmap = $*J->sizesnapmap * @sizeof_SnapEntry
     if (sizesnapmap) {

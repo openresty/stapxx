@@ -1,0 +1,151 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+global states, total, ignored
+
+function process_timer_event()
+{
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
+    if (mL == 0) {
+        ignored++
+        return 0
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        ignored++
+        return 0
+    }
+
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    gco = $*g->cur_L->gcptr64
+    $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+
+    L = &$*gco->th
+    $*L := @cast(L, "lua_State", "$^libluajit_path")
+
+    if (L == 0) {
+        ignored++
+        return 0
+    }
+
+    /*
+    printf("cur L: %p\n", L)
+    printf("vmstate: %d\n", $*g->vmstate)
+    printf("cframe: %p\n", $*L->cframe)
+    */
+
+    vmstate = $*g->vmstate
+    if (vmstate >= 0) {
+        /* compiled Lua code */
+        states["N"]++
+        total++
+
+    } else {
+        if (vmstate == -1 && !$*L->cframe) {
+            ignored++
+
+        } else {
+            if (vmstate == -1) {
+                states["I"]++
+
+            } else if (vmstate == -2) {
+                states["C"]++
+
+            } else if (vmstate == -3) {
+                if ($*g->jit_base->ptr64) {
+                    states["NG"]++
+
+                } else {
+                    states["G"]++
+                }
+
+            } else if (vmstate == -4) {
+                states["E"]++
+
+            } else {
+                states["J"]++
+            }
+
+            total++
+        }
+    }
+
+    return 1
+}
+
+probe timer.profile
+{
+    if (pid() == target()) {
+        process_timer_event()
+    }
+}
+
+function gen_report()
+{
+    printf("\nObserved %d Lua-running samples and ignored %d unrelated samples.\n",
+           total, ignored)
+
+    foreach (state in states-) {
+        if (state == "I") {
+            ctx = "Interpreted"
+
+        } else if (state == "N") {
+            ctx = "Compiled"
+
+        } else if (state == "J") {
+            ctx = "JIT Compiler"
+
+        } else if (state == "C") {
+            ctx = "C Code (by interpreted Lua)"
+
+        } else if (state == "E") {
+            ctx = "Trace exiting"
+
+        } else if (state == "NG") {
+            ctx = "Garbage Collector (compiled)"
+
+        } else {
+            /* state == "G" */
+            ctx = "Garbage Collector (not compiled)"
+        }
+
+        count = states[state]
+        printf("%s: %d%% (%d samples)\n", ctx, count*100/total, count)
+    }
+}
+
+probe end
+{
+    if (total == 0) {
+        printf("\nNo Lua-running samples observed.\n")
+
+    } else {
+        gen_report()
+    }
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

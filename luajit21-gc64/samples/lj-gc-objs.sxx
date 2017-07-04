@@ -1,0 +1,205 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit
+
+@define TSTR    %( 4 %)
+@define TUPVAL  %( 5 %)
+@define TTHREAD %( 6 %)
+@define TPROTO  %( 7 %)
+@define TFUNC   %( 8 %)
+@define TTRACE  %( 9 %)
+@define TCDATA  %( 10 %)
+@define TTAB    %( 11 %)
+@define TUDATA  %( 12 %)
+
+@define GCSpause        %( 0 %)
+@define GCSpropagate    %( 1 %)
+@define GCSatomic       %( 2 %)
+@define GCSsweepstring  %( 3 %)
+@define GCSsweep        %( 4 %)
+@define GCSfinalize     %( 5 %)
+
+@define LJ_PAGESIZE     %( 4096 %)
+@define LJ_NUM_CBPAGE   %( 1 %)
+@define CALLBACK_MCODE_SIZE    %( (@LJ_PAGESIZE * @LJ_NUM_CBPAGE) %)
+
+@define sizeof_GG_State %( &@cast(0, "GG_State", "$^libluajit_path")[1] %)
+@define sizeof_lua_State %( &@cast(0, "struct lua_State", "$^libluajit_path")[1] %)
+@define sizeof_GCRef %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
+@define sizeof_CType %( &@cast(0, "CType", "$^libluajit_path")[1] %)
+@define sizeof_CTState %( &@cast(0, "CTState", "$^libluajit_path")[1] %)
+
+global typenames
+global gcstates
+global gcobjs
+
+probe @pfunc(ngx_process_events_and_timers)?, timer.profile
+{
+    if (pid() == target()) {
+        if (@defined(@var("globalL", "$^exec_path"))) {
+            L = @var("globalL", "$^exec_path")
+
+        } else {
+            L = ngx_lua_get_main_lua_vm()
+        }
+
+        if (L == 0) {
+            printf("Failed to get the main Lua VM\n")
+            exit()
+        }
+
+        process(L)
+    }
+}
+
+function process(L)
+{
+    begin = gettimeofday_us()
+
+    g = luajit_G(L)
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    GG = g - &@cast(0, "GG_State", "$^libluajit_path")->g
+    $*GG := @cast(GG, "GG_State", "$^libluajit_path")
+
+    J = &$*GG->J
+    $*J := @cast(J, "jit_State", "$^libluajit_path")
+
+    mc_size = $*J->szallmcarea
+
+    if (mc_size) {
+        printf("main machine code area size: %d bytes\n", mc_size)
+    }
+
+    cts = $*g->ctype_state->ptr64
+    $*cts := @cast(cts, "CTState", "$^libluajit_path")
+    if (cts) {
+        printf("C callback machine code size: %d bytes\n", @CALLBACK_MCODE_SIZE)
+    }
+
+    printf("GC total size: %d bytes\n", $*g->gc->total)
+
+    $*o := @cast(o, "GCobj", "$^libluajit_path")
+    for (p = &$*g->gc->root; p; p = &$*o->gch->nextgc) {
+        o = luajit_gcref(p)
+        if (o == 0) {
+            break
+        }
+        //printf("gct: %d\n", $*o->gch->gct)
+        gct = $*o->gch->gct
+        size = luajit_objlen(o, gct, g)
+        //printf("%s: %d\n", typenames[gct], size)
+        gcobjs[$*o->gch->gct] <<< size
+    }
+
+    strmask = $*g->strmask
+    strnum = $*g->strnum
+    strhash = $*g->strhash
+    $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
+
+    n = 0
+    done = 0
+    for (i = 0; i <= strmask; i++) {
+        p = &$*strhash[i]
+
+        while (p) {
+            o = luajit_gcref(p)
+            if (o == 0) {
+                break;
+            }
+
+            $*o := @cast(o, "GCobj", "$^libluajit_path")
+            gct = $*o->gch->gct
+            if (gct != @TSTR) {
+                error(sprintf("Bad string type: %d", gct))
+            }
+            size = luajit_objlen(o, @TSTR, g)
+            //printf("%s: %d\n", typenames[@TSTR], size)
+            gcobjs[@TSTR] <<< size
+
+            if (++n == strnum) {
+                done = 1
+                break
+            }
+
+            p = &$*o->gch->nextgc
+        }
+
+        if (done) {
+            break
+        }
+    }
+
+    strhash_size = (strmask + 1) * @sizeof_GCRef
+
+    //printf("strmask: %d, strnum: %d, strings: %d\n", strhash, strnum, n)
+    printf("GC state: %s\n\n", gcstates[$*g->gc->state])
+
+    total = 0
+    foreach (t in gcobjs- limit 100) {
+        printf("%d %s objects: max=%d, avg=%d, min=%d, sum=%d (in bytes)\n",
+               @count(gcobjs[t]), typenames[t], @max(gcobjs[t]),
+               @avg(gcobjs[t]), @min(gcobjs[t]), @sum(gcobjs[t]))
+        total += @sum(gcobjs[t])
+    }
+
+    total += strhash_size + @sizeof_GG_State - @sizeof_lua_State
+
+    jit_state_size = luajit_jit_state_size(J)
+    if (jit_state_size) {
+        total += jit_state_size
+        printf("JIT state size: %d bytes\n", jit_state_size)
+    }
+
+    if (@defined($*g->tmpbuf->sz)) {
+        /* for LuaJIT 2.0 */
+        sizetmpbuf = $*g->tmpbuf->sz
+
+    } else {
+        /* for LuaJIT 2.1 */
+        sizetmpbuf = $*g->tmpbuf->e->ptr64 - $*g->tmpbuf->b->ptr64
+    }
+
+    if (sizetmpbuf) {
+        total += sizetmpbuf
+        printf("global state tmpbuf size: %d bytes\n", sizetmpbuf)
+    }
+
+    if (cts) {
+        ctype_state_size = $*cts->sizetab * @sizeof_CType
+        ctype_state_size += @sizeof_CTState
+        if (ctype_state_size) {
+            total += ctype_state_size
+            printf("C type state size: %d bytes\n", ctype_state_size)
+        }
+    }
+
+    printf("\nMy GC walker detected for total %d bytes.\n", total)
+
+    printf("%d microseconds elapsed in the probe handler.\n",
+           gettimeofday_us() - begin)
+
+    exit()
+}
+
+probe begin {
+    typenames[@TSTR] = "string"
+    typenames[@TUPVAL] = "upvalue"
+    typenames[@TTHREAD] = "thread"
+    typenames[@TPROTO] = "proto"
+    typenames[@TFUNC] = "function"
+    typenames[@TTRACE] = "trace"
+    typenames[@TCDATA] = "cdata"
+    typenames[@TTAB] = "table"
+    typenames[@TUDATA] = "userdata"
+
+    gcstates[@GCSpause] = "pause"
+    gcstates[@GCSpropagate] = "propagate"
+    gcstates[@GCSatomic] = "atomic"
+    gcstates[@GCSsweepstring] = "sweep-string"
+    gcstates[@GCSsweep] = "sweep"
+    gcstates[@GCSfinalize] = "finalize"
+
+    printf("Start tracing %d ($^exec_path)\n\n", target())
+}

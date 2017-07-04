@@ -1,0 +1,848 @@
+// module luajit
+
+
+@use nginx.lua
+
+
+$*pt := @cast(pt, "GCproto", "$^libluajit_path")
+
+
+//@define LJ_TLIGHTUD  %( 4294967292 %)
+@define LJ_TLIGHTUD  %( 4294901760 %)
+@define LJ_TSTR  %( 4294967291 %)
+@define LJ_TUDATA  %( 4294967283 %)
+@define LJ_TTHREAD  %( 4294967289 %)
+@define LJ_TFUNC  %( 4294967287 %)
+
+
+@define TSTR    %( 4 %)
+@define TUPVAL  %( 5 %)
+@define TTHREAD %( 6 %)
+@define TPROTO  %( 7 %)
+@define TFUNC   %( 8 %)
+@define TTRACE  %( 9 %)
+@define TCDATA  %( 10 %)
+@define TTAB    %( 11 %)
+@define TUDATA  %( 12 %)
+
+@define CTSHIFT_NUM  %( 28 %)
+@define CT_HASSIZE   %( 5 %)
+@define CT_ATTRIB    %( 8 %)
+@define CTMASK_CID   %( 0xffff %)
+
+@define FF_LUA %( 0 %)
+@define FF_C   %( 1 %)
+
+@define FRAME_LUA   %( 0 %)
+@define FRAME_CONT  %( 2 %)
+@define FRAME_TYPE  %( 3 %)
+@define FRAME_P     %( 4 %)
+@define FRAME_TYPEP %( (@FRAME_TYPE|@FRAME_P) %)
+
+@define NO_BCPOS    %( ~0 %)
+
+@define LJ_GCVMASK %( 140737488355327 %)
+@define LJ_FR2 %( 1 %)
+
+@define sizeof_GCtab  %( &@cast(0, "GCtab", "$^libluajit_path")[1] %)
+@define sizeof_TValue  %( &@cast(0, "TValue", "$^libluajit_path")[1] %)
+@define sizeof_lua_State %( &@cast(0, "struct lua_State", "$^libluajit_path")[1] %)
+@define sizeof_GCfunc %( &@cast(0, "union GCfunc", "$^libluajit_path")[1] %)
+@define sizeof_GCupval %( &@cast(0, "GCupval", "$^libluajit_path")[1] %)
+@define sizeof_GCstr %( &@cast(0, "GCstr", "$^libluajit_path")[1] %)
+@define sizeof_GCudata %( &@cast(0, "GCudata", "$^libluajit_path")[1] %)
+@define sizeof_Node %( &@cast(0, "Node", "$^libluajit_path")[1] %)
+@define sizeof_GCfuncC %( &@cast(0, "GCfuncC", "$^libluajit_path")[1] %)
+@define sizeof_GCfuncL %( &@cast(0, "GCfuncL", "$^libluajit_path")[1] %)
+@define sizeof_GCRef %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
+@define sizeof_GCproto %( &@cast(0, "GCproto", "$^libluajit_path")[1] %)
+@define sizeof_GCtrace %( &@cast(0, "GCtrace", "$^libluajit_path")[1] %)
+@define sizeof_GCcdata %( &@cast(0, "GCcdata", "$^libluajit_path")[1] %)
+@define sizeof_IRIns %( &@cast(0, "IRIns", "$^libluajit_path")[1] %)
+@define sizeof_IRRef %( &@cast(0, "IRRef", "$^libluajit_path")[1] %)
+@define sizeof_SnapShot %( &@cast(0, "SnapShot", "$^libluajit_path")[1] %)
+@define sizeof_SnapEntry %( &@cast(0, "SnapEntry", "$^libluajit_path")[1] %)
+@define sizeof_K64Array %( &@cast(0, "K64Array", "$^libluajit_path")[1] %)
+@define sizeof_ptr %( &@cast(0, "global_State", "$^libluajit_path")->strmask %)
+@define sizeof_GCcdataVar %( &@cast(0, "GCcdataVar", "$^libluajit_path")[1] %)
+@define sizeof_BCIns %( &@cast(0, "BCIns", "$^libluajit_path")[1] %)
+
+@define strdata(s) %(
+    (@s + @sizeof_GCstr)
+%)
+
+@define gcrefu(frame) %(
+    @cast(@frame, "TValue", "$^libluajit_path")->gcr->gcptr64
+%)
+
+@define gcval(frame) %(
+    (@gcrefu(@frame) & @LJ_GCVMASK)
+%)
+
+@define frame_gc(frame) %(
+    @gcval(@frame - @sizeof_TValue)
+%)
+
+@define frame_ftsz(tv) %(
+    @cast(@tv, "TValue", "$^libluajit_path")->ftsz
+%)
+
+@define frame_type(f) %(
+    (@frame_ftsz(@f) & @FRAME_TYPE)
+%)
+
+@define frame_typep(f) %(
+    (@frame_ftsz(@f) & @FRAME_TYPEP)
+%)
+
+@define frame_islua(f) %(
+    (@frame_type(@f) == @FRAME_LUA)
+%)
+
+@define frame_iscont(f) %(
+    (@frame_typep(@f) == @FRAME_CONT)
+%)
+
+@define frame_pc(tv) %(
+    @cast(@tv, "TValue", "$^libluajit_path")->ftsz
+%)
+
+@define frame_contpc(f) %(
+    (@frame_pc(@f - 2 * @sizeof_TValue))
+%)
+
+@define bc_a(i) %(
+    ((@i >> 8) & 0xff)
+%)
+
+@define frame_prevl(f) %(
+    (@f - (1 + @LJ_FR2 + @bc_a(user_uint32(@frame_pc(@f) - 4))) * @sizeof_TValue)
+%)
+
+@define FRAME_VARG  %( 3 %)
+
+@define frame_isvarg(f) %(
+    (@frame_typep(@f) == @FRAME_VARG)
+%)
+
+@define frame_sized(f) %(
+    (@frame_ftsz(@f) & ~@FRAME_TYPEP)
+%)
+
+@define frame_prevd(f) %(
+    (@f - @frame_sized(@f))
+%)
+
+@define isluafunc(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->c->ffid == @FF_LUA)
+%)
+
+@define isffunc(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->c->ffid > @FF_C)
+%)
+
+@define funcproto(fn) %(
+    (@cast(@fn, "GCfunc", "$^libluajit_path")->l->pc->ptr64 - @sizeof_GCproto)
+%)
+
+@define proto_bc(pt) %(
+    (@pt + @sizeof_GCproto)
+%)
+
+@define proto_bcpos(pt, pc) %(
+    ((@pc - @proto_bc(@pt)) / @sizeof_TValue)
+%)
+
+@define proto_lineinfo(pt) %(
+    @cast(@pt, "GCproto", "$^libluajit_path")->lineinfo->ptr64
+%)
+
+
+global luajit_cfunc_cache
+
+
+function luajit_frame_func(f) {
+    gco = @frame_gc(f)
+    $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+    return &$*gco->fn
+}
+
+
+function luajit_G(L)
+{
+    $*L := @cast(L, "lua_State", "$^libluajit_path")
+    return $*L->glref->ptr64
+}
+
+
+function luajit_gcref(r)
+{
+    $*r := @cast(r, "GCRef", "$^libluajit_path")
+    return $*r->gcptr64
+}
+
+
+function luajit_objlen(o, gct, g)
+{
+    $*o := @cast(o, "GCobj", "$^libluajit_path")
+    if (gct == @TSTR) {
+        /*
+        if ($*o->str->len == 0) {
+            printf("empty string found.\n")
+        }
+        */
+        return $*o->str->len + 1 + @sizeof_GCstr
+    }
+
+    if (gct == @TTAB) {
+        t = &$*o->tab
+        $*t := @cast(t, "GCtab", "$^libluajit_path")
+        asize = $*t->asize
+        hmask = $*t->hmask
+
+        n = 0
+        if (hmask > 0) {
+            n += @sizeof_Node * (hmask + 1)
+        }
+
+        if (asize > 0 && $*t->colo <= 0) {
+            n += @sizeof_TValue * asize
+        }
+
+        if ($*t->colo) {
+            n += ($*t->colo & 0x7f) * @sizeof_TValue + @sizeof_GCtab
+
+        } else {
+            n += @sizeof_GCtab
+        }
+
+        return n
+    }
+
+    if (gct == @TUDATA) {
+        return $*o->ud->len + @sizeof_GCudata
+    }
+
+    if (gct == @TPROTO) {
+        return $*o->pt->sizept
+    }
+
+    if (gct == @TTHREAD) {
+        L = &$*o->th
+        //printf("open upval: %p\n", luajit_gcref(&$*L->openupval))
+        //printf("lua_State: %d\n", @sizeof_lua_State)
+        n = @sizeof_lua_State + $*L->stacksize * @sizeof_TValue
+        p = &$*L->openupval
+        while (p) {
+            o = luajit_gcref(p)
+            if (o == 0) {
+                break;
+            }
+
+            $*o := @cast(o, "GCobj", "$^libluajit_path")
+            gct = $*o->gch->gct
+            size = luajit_objlen(o, gct, g)
+            //printf("%s: %d\n", typenames[@TSTR], size)
+            n += size
+            p = &$*o->gch->nextgc
+        }
+
+        return n
+    }
+
+    if (gct == @TFUNC) {
+        fn = &$*o->fn
+        $*fn := @cast(fn, "GCfunc", "$^libluajit_path");
+        if (@isluafunc(fn)) {
+            n = $*fn->l->nupvalues
+            //n = 0
+            return @sizeof_GCfuncL - @sizeof_GCRef + @sizeof_GCRef * n
+        }
+
+        n = $*fn->c->nupvalues
+        //n = 0
+        return @sizeof_GCfuncC - @sizeof_TValue + @sizeof_TValue * n
+    }
+
+    if (gct == @TUPVAL) {
+        return @sizeof_GCupval
+    }
+
+    if (gct == @TTRACE) {
+        T = o
+        $*T := @cast(T, "GCtrace", "$^libluajit_path")
+        return ((@sizeof_GCtrace + 7) & ~7)
+               + ($*T->nins - $*T->nk) * @sizeof_IRIns
+               + $*T->nsnap * @sizeof_SnapShot
+               + $*T->nsnapmap * @sizeof_SnapEntry
+    }
+
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    if (gct == @TCDATA) {
+        cd = o
+        $*cd := @cast(cd, "GCcdata", "$^libluajit_path")
+        if ($*cd->marked & 0x80) {
+            /* cdata is a vector */
+            cdatav = cd - @sizeof_GCcdataVar
+            $*cdatav := @cast(cdatav, "GCcdataVar", "$^libluajit_path")
+            return $*cdatav->len + $*cdatav->extra
+        }
+
+        /* cdata is not a vector */
+        cts = $*g->ctype_state->ptr64
+        $*cts := @cast(cts, "CTState", "$^libluajit_path")
+        id = $*cd->ctypeid
+        ct = &$*cts->tab[id]
+        $*ct := @cast(ct, "CType", "$^libluajit_path")
+        while (($*ct->info >> @CTSHIFT_NUM) == @CT_ATTRIB) {
+            //printf("XXX skipping c type attribute\n")
+            ct = &$*cts->tab[$*ct->info & @CTMASK_CID]
+        }
+
+        if (($*ct->info >> @CTSHIFT_NUM) <= @CT_HASSIZE) {
+            sz = $*ct->size
+
+        } else {
+            sz = @sizeof_ptr
+        }
+
+        //printf("GCcdata size: %d\n", @sizeof_GCcdata)
+        return @sizeof_GCcdata + sz
+    }
+
+    return 0
+}
+
+
+function luajit_jit_state_size(J)
+{
+    $*J := @cast(J, "jit_State", "$^libluajit_path")
+
+    ir_k64_size = 0
+    // In the newer revision of luajit, 64-bit constants are represented as an
+    // array of TValue. Uncomment following code if the luajit being used
+    // is using linked list to represent 64-bit constants. As the 64-bit
+    // constants don't take lots of memory, it does not seems to be a big deal
+    // if you don't uncomment following code for the older luajit.
+    //
+    /*
+    $*k := @cast(k, "K64Array", "$^libluajit_path")
+    for (k = $*J->k64->ptr64; k; ) {
+        ir_k64_size += @sizeof_K64Array
+        k = $*k->next->ptr64
+    }
+    if (ir_k64_size) {
+        //printf("64-bit constants: %d\n", ir_k64_size)
+    }
+    */
+
+    sizesnapmap = $*J->sizesnapmap * @sizeof_SnapEntry
+    if (sizesnapmap) {
+        //printf("JIT snap map buffer size: %d\n", sizesnapmap)
+    }
+
+    sizesnap = $*J->sizesnap * @sizeof_SnapShot
+    if (sizesnap) {
+        //printf("JIT snap buffer size: %d\n", sizesnap)
+    }
+
+    sizeirbuf = ($*J->irtoplim - $*J->irbotlim) * @sizeof_IRIns
+    if (sizeirbuf) {
+        //printf("JIT IR buffer size: %d\n", sizeirbuf)
+    }
+
+    sizetrace = $*J->sizetrace * @sizeof_GCRef
+    if (sizetrace) {
+        //printf("JIT trace array size: %d\n", sizetrace)
+    }
+
+    return ir_k64_size + sizesnapmap + sizesnap + sizeirbuf + sizetrace
+}
+
+
+/* returns a TValue* pointer */
+function luajit_index2adr(L, idx)
+{
+    if (idx > 0) {
+        o = $*L->base + (idx - 1) * @sizeof_TValue
+        return o < $*L->top ? o : 0
+    }
+
+    top = $*L->top
+
+    if (idx != 0 && -idx <= top - $*L->base) {
+        return top + idx * @sizeof_TValue;
+    }
+
+    return 0
+}
+
+
+/* convert GCstr to stap string */
+function luajit_unbox_gcstr(gcs)
+{
+    if (gcs == 0) {
+        return ""
+    }
+
+    $*gcs := @cast(gcs, "GCstr", "$^libluajit_path")
+    src = @strdata(gcs)
+    return user_string_n_warn(src, $*gcs->len)
+}
+
+
+function luajit_tostring(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return "<nil>"
+    }
+
+    if ($*o->it == @LJ_TSTR) {
+        gco = $*o->gcr->gcptr64
+        $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+        s = &$*gco->str
+        $*s := @cast(s, "GCstr", "$^libluajit_path")
+        return user_string_n(s + @sizeof_GCstr, $*s->len)
+    }
+
+    return "<unknown>"
+}
+
+
+function luajit_tostringlen(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return -1
+    }
+
+    if ($*o->it == @LJ_TSTR) {
+        gco = $*o->gcr->gcptr64
+        $*gco := @cast(gco, "GCobj", "$^libluajit_path")
+        s = &$*gco->str
+        $*s := @cast(s, "GCstr", "$^libluajit_path")
+        return $*s->len
+    }
+
+    return -1
+}
+
+
+function luajit_touserdata(L, idx)
+{
+    $*o := @cast(o, "TValue", "$^libluajit_path")
+    o = luajit_index2adr(L, idx)
+    if (o == 0) {
+        return 0
+    }
+
+    //printf("udata type: %d (%d)\n", $*o->it, ($*o->it >> 15))
+
+    if ($*o->it == @LJ_TUDATA) {
+        gco = $*o->gcr->gcptr64
+        ud = &$*gco->ud
+        $*ud := @cast(ud, "GCudata", "$^libluajit_path")
+        return ud + @sizeof_GCudata
+    }
+
+    if ($*o->it == @LJ_TLIGHTUD) {
+        return $*o->u64 & 0x7fffffffffff
+    }
+
+    return 0
+}
+
+
+function luajit_proto_chunkname(pt) {
+    gco = $*pt->chunkname->gcptr64
+    return &$*gco->str
+}
+
+
+function luajit_debug_framepc(L, T, fn, pt, nextframe) {
+    //printf("debug framepc: L=%p, fn=%p, nextframe=%p\n", L, fn, nextframe)
+    if (nextframe == 0) {
+        return @NO_BCPOS
+    }
+
+    if (@frame_islua(nextframe)) {
+        ins = @frame_pc(nextframe);
+        //printf("frame is lua, ins = %p\n", ins)
+
+    } else if (@frame_iscont(nextframe)) {
+        //println("frame is cont")
+        ins = @frame_contpc(nextframe)
+
+    } else {
+        /* TODO: add support for cframe */
+    }
+
+    //printf("debug framepc: ins = %p\n", ins)
+    pos = @proto_bcpos(pt, ins) - 1;
+    //printf("debug framepc: pos = %d\n", pos)
+    sizebc = $*pt->sizebc
+    //printf("debug framepc: ins = %p, pos=%d, sizebc=%d\n", ins, pos, sizebc)
+    if (pos > sizebc) {
+        //printf("Undo the effects of lj_trace_exit for JLOOP.\n")
+        if (!T) {
+            T = ins - 1 * @sizeof_BCIns - &@cast(0, "GCtrace", "$^libluajit_path")->startins;
+        }
+        //printf("startpc: %d\n", $*T->startpc->ptr64)
+        pos = @proto_bcpos(pt, $*T->startpc->ptr64);
+        //printf("Found adjusted position: %d\n", pos)
+    }
+    return pos;
+}
+
+
+function luajit_debug_line(pt, pc)
+{
+    lineinfo = @proto_lineinfo(pt)
+    //printf("lj_debug_line: lineinfo = %p, %x <= %x\\n", lineinfo,
+           //pc, $pt->sizebc)
+    sizebc = $*pt->sizebc
+
+    if (pc <= sizebc && lineinfo) {
+        first = $*pt->firstline
+
+        if (pc == sizebc) {
+            return first + $*pt->numline
+        }
+
+        if (pc-- == 0) {
+            return first
+        }
+
+        if ($*pt->numline < 256) {
+            return first + @cast(lineinfo, "uint8_t", "$^libluajit_path")[pc]
+        }
+
+        if ($*pt->numline < 65536) {
+            return first + @cast(lineinfo, "uint16_t", "$^libluajit_path")[pc]
+        }
+
+        return first + @cast(lineinfo, "uint32_t", "$^libluajit_path")[pc]
+    }
+
+    return -1
+}
+
+
+function luajit_debug_frameline(L, T, fn, pt, nextframe)
+{
+    pc = luajit_debug_framepc(L, T, fn, pt, nextframe)
+    if (pc != @NO_BCPOS) {
+        if (pc <= $*pt->sizebc) {
+            return luajit_debug_line(pt, pc)
+        }
+    }
+
+    return -1
+}
+
+
+
+function luajit_debug_dumpstack(L, T, depth, base, simple)
+{
+    level = 0
+    dir = 1
+    if (depth < 0) { // reverse frames
+        level = ~depth
+        depth = dir = -1
+    }
+    bt = ""
+    while (level != depth) {
+        /* lj_debug_frame(L, level, &size) {{{ */
+        bot = $*L->stack->ptr64 + @sizeof_TValue //@LJ_FR2
+        found_frame = 0
+        tmp_level = level
+        /* Traverse frames backwards. */
+        for (nextframe = frame = base - @sizeof_TValue; frame > bot; ) {
+            if (@frame_gc(frame) == L) {
+                tmp_level++
+            }
+
+            if (tmp_level-- == 0) {
+                size = (nextframe - frame) / @sizeof_TValue
+                found_frame = 1
+                break
+            }
+            nextframe = frame
+            
+            if (@frame_islua(frame)) {
+                frame = @frame_prevl(frame)
+
+            } else {
+                if (@frame_isvarg(frame)) {
+                    tmp_level++;  /* Skip vararg pseudo-frame. */
+                }
+
+                frame = @frame_prevd(frame);
+            }
+        }
+
+        if (!found_frame) {
+            frame = 0
+            size = tmp_level
+        }
+        /* }}} */
+
+        if (frame) {
+            nextframe = size ? frame + size * @sizeof_TValue : 0
+            fn = luajit_frame_func(frame)
+            if (fn == 0) {
+                return ""
+            }
+            if (@isluafunc(fn)) {
+                pt = @funcproto(fn)
+
+                if (simple) {
+                    line = $*pt->firstline
+
+                } else {
+                    line = luajit_debug_frameline(L, T, fn, pt, nextframe)
+                    if (line < 0) {
+                        line = $*pt->firstline
+                        //printf("using firstline %d\n", line)
+
+                    } else {
+                        //printf("GOT the lineno %d\n", line)
+                    }
+                }
+
+                name = luajit_proto_chunkname(pt)  /* GCstr *name */
+                if (name == 0) {
+                    return ""
+                }
+
+                path = luajit_unbox_gcstr(name)
+                bt .= sprintf("%s:%d\n", path, line)
+
+            } else if (@isffunc(fn)) {
+                bt .= sprintf("builtin#%d\n", $*fn->c->ffid)
+
+            } else {
+                /* C function */
+                cfunc = $*fn->c->f
+                sym = luajit_cfunc_cache[cfunc]
+                if (sym == "") {
+                    sym = sprintf("C:%s\n", usymname(cfunc))
+                    luajit_cfunc_cache[cfunc] = sym
+                }
+                bt .= sym
+            }
+
+        } else if (dir == 1) {
+            break
+
+        } else {
+            level -= size
+        }
+        level += dir
+    }
+
+    return bt
+}
+
+
+function luajit_cur_thread(g)
+{
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+    gco = $*g->cur_L->gcptr64
+    if (gco == 0) {
+        return 0
+    }
+
+    return &$*gco->th
+}
+
+
+function luajit_get_trace(g, traceno)
+{
+    GG = g - &@cast(0, "GG_State", "$^libluajit_path")->g
+    $*GG := @cast(GG, "GG_State", "$^libluajit_path")
+    J = &$*GG->J
+    $*J := @cast(J, "jit_State", "$^libluajit_path")
+    if (J == 0) {
+        return 0
+    }
+
+    return $*J->trace[traceno]->gcptr64
+}
+
+
+function luajit_trace_starting_func(g, trace)
+{
+    $*trace := @cast(trace, "GCtrace", "$^libluajit_path")
+    gco = $*trace->startpt->gcptr64
+    if (gco == 0) {
+        return ""
+    }
+
+    pt = &$*gco->pt
+
+    firstline = $*pt->firstline
+
+    name = luajit_proto_chunkname(pt)  /* GCstr *name */
+    path = luajit_unbox_gcstr(name)
+
+    return sprintf("%s:%d", path, firstline)
+}
+
+
+function luajit_print_backtrace(simple)
+{
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
+    if (mL == 0) {
+        return ""
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return ""
+    }
+
+    L = luajit_cur_thread(g)
+    if (L == 0) {
+        return ""
+    }
+
+    return luajit_backtrace(L, g, simple)
+}
+
+
+function luajit_backtrace(L, g, simple)
+{
+    bt = ""
+
+    vmstate = $*g->vmstate
+    if (vmstate >= 0 || (vmstate == -3 && $*g->jit_base->ptr64)) {
+        /* compiled Lua code */
+
+        T = luajit_get_trace(g, vmstate)
+        if (T) {
+            if (simple) {
+                func = luajit_trace_starting_func(g, T)
+                if (func != "") {
+                    bt .= sprintf("T:%s\n", func)
+                }
+
+            } else {
+                //printf("start pc: %d\n", $*T->startpc->ptr64)
+            }
+
+            #warn(sprintf("bt: %s", bt))
+        }
+
+        base = $*g->jit_base->ptr64
+        if (!base) {
+            return bt
+        }
+
+        bt .= luajit_debug_dumpstack(L, T, $^arg_depth :default(30), base, simple)
+        /*
+        if (bt != "") {
+            warn(sprintf("JIT backtrace: %s\n", bt))
+        }
+        */
+
+        /*
+        if (vmstate == -3) {
+            printf("HIT JIT GC: %s===\n", bt)
+        }
+        */
+
+    } else {
+
+        if (vmstate == -1 && !$*L->cframe) {
+            return ""
+        }
+
+        if (vmstate == -1 || vmstate == -2 || vmstate == -3) {
+            base = $*L->base
+            bt .= luajit_debug_dumpstack(L, 0, $^arg_depth, base, simple)
+        }
+    }
+
+    return bt
+}
+
+
+function luajit_vm_state(g)
+{
+    return $*g->vmstate
+}
+
+
+function luajit_find_gcstr(g, str)
+{
+    len = strlen(str)
+    strmask = $*g->strmask
+    strnum = $*g->strnum
+    strhash = $*g->strhash
+    $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
+    ret = 0
+
+    n = 0
+    done = 0
+    for (i = 0; i <= strmask; i++) {
+        p = &$*strhash[i]
+
+        while (p) {
+            o = luajit_gcref(p)
+            if (o == 0) {
+                break
+            }
+
+            $*o := @cast(o, "GCobj", "$^libluajit_path")
+            if ($*o->str->len == len) {
+                gcs = &$*o->str
+                s = luajit_unbox_gcstr(gcs)
+                if (s == str) {
+                    done = 1
+                    ret = gcs
+                    break
+                }
+            }
+
+            if (++n == strnum) {
+                done = 1
+                break
+            }
+
+            p = &$*o->gch->nextgc
+        }
+
+        if (done) {
+            break
+        }
+    }
+
+    return ret
+}
+
+function luajit_bucket_depth(p)
+{
+    n = 0
+    while (p) {
+        $*o := @cast(o, "GCobj", "$^libluajit_path")
+        o = luajit_gcref(p)
+        if (o == 0) {
+            break
+        }
+
+        n++;
+        p = &$*o->gch->nextgc
+    }
+    return n
+}

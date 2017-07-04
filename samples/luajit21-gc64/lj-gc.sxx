@@ -1,0 +1,42 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit_gc64
+
+probe @pfunc(ngx_process_events_and_timers)?, timer.profile
+{
+    if (pid() == target()) {
+        if (@defined(@var("globalL", "$^exec_path"))) {
+            L = @var("globalL", "$^exec_path")
+
+        } else {
+            L = ngx_lua_get_main_lua_vm()
+        }
+
+        if (L == 0) {
+            printf("Failed to get the main Lua VM\n")
+            exit()
+        }
+
+        process(L)
+    }
+}
+
+function process(L)
+{
+    //printf("L = %p\n", L)
+    G = luajit_G(L)
+    if (G == 0) {
+        printf("Failed to get the global Lua state\n")
+        exit()
+
+    } else {
+        $*G := @cast(G, "global_State", "$^libluajit_path")
+        printf("Total GC count: %lu bytes\n", $*G->gc->total)
+        exit()
+    }
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\n", target())
+}

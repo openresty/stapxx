@@ -1,7 +1,7 @@
 #!/usr/bin/env stap++
 
 @use nginx.lua
-@use luajit
+@use luajit_gc64
 
 probe @pfunc(ngx_process_events_and_timers)?, timer.profile
 {

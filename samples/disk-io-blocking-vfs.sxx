@@ -1,0 +1,46 @@
+#!/usr/bin/env stap++
+
+# Measure the distribution of the VFS read/write latency.
+
+global begin, stats, latency, found
+
+probe vfs.read*, vfs.write*
+{
+    if (sprintf("%d", pid()) =~ "^($^target)$") {
+        begin[pid()] = gettimeofday_ms()
+        found = 1
+    }
+}
+
+probe vfs.read*.return, vfs.write*.return
+{
+    if (sprintf("%d", pid()) =~ "^($^target)$" && begin[pid()] > 0) {
+        latency = gettimeofday_ms() - begin[pid()]
+        stats[pid()] <<< latency
+    }
+}
+
+probe timer.s($^arg_time :default(5)) {
+    exit()
+}
+
+probe end {
+
+    if (found != 1) {
+        printf("No samples observed so far.\n");
+
+    } else {
+        printf("Distribution of disk read/write blocking latencies (in milliseconds)\n")
+
+        foreach (name in stats) {
+            printf("pid %d:\n", name)
+            printf("max/avg/min: %d/%d/%d\n", @max(stats[name]), @avg(stats[name]), @min(stats[name]))
+            print(@hist_log(stats[name]))
+        }
+    }
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\nPlease wait for %d seconds.\n\n",
+           target(), $^arg_time)
+}

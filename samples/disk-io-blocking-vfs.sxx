@@ -2,7 +2,7 @@
 
 # Measure the distribution of the VFS read/write latency.
 
-global begin, stats, latency, found
+global begin, stats, found
 
 probe vfs.read*, vfs.write*
 {
@@ -15,8 +15,7 @@ probe vfs.read*, vfs.write*
 probe vfs.read*.return, vfs.write*.return
 {
     if (sprintf("%d", pid()) =~ "^($^target)$" && begin[pid()] > 0) {
-        latency = gettimeofday_ms() - begin[pid()]
-        stats[pid()] <<< latency
+        stats[pid()] <<< gettimeofday_ms() - begin[pid()]
     }
 }
 

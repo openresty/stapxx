@@ -4,42 +4,53 @@
 
 global begin, stats, found
 
-probe vfs.read*, vfs.write*
+probe syscall.lseek, syscall.renameat, syscall.open, syscall.close,
+      syscall.sendfile*, vfs.read*, vfs.write*, syscall.*stat*,
+      syscall.unlink, syscall.mkdir, syscall.rmdir
 {
-    if (sprintf("%d", pid()) =~ "^($^target)$") {
-        begin[pid()] = gettimeofday_ms()
+    if ($^pid_ok) {
+        begin[pid()] = gettimeofday_us()
+    }
+}
+
+probe syscall.lseek.return, syscall.renameat.return, syscall.open.return,
+      syscall.close.return, syscall.sendfile*.return, vfs.read*.return,
+      vfs.write*.return, syscall.*stat*.return, syscall.unlink.return,
+      syscall.mkdir.return, syscall.rmdir.return
+{
+    if ($^pid_ok && begin[pid()] > 0) {
+        stats[pid()] <<< gettimeofday_us() - begin[pid()]
         found = 1
     }
 }
 
-probe vfs.read*.return, vfs.write*.return
-{
-    if (sprintf("%d", pid()) =~ "^($^target)$" && begin[pid()] > 0) {
-        stats[pid()] <<< gettimeofday_ms() - begin[pid()]
-    }
-}
-
-probe timer.s($^arg_time :default(5)) {
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time) {
     exit()
 }
+%)
 
 probe end {
 
-    if (found != 1) {
+    if (!found) {
         printf("No samples observed so far.\n");
 
     } else {
-        printf("Distribution of disk read/write blocking latencies (in milliseconds)\n")
+        printf("Distribution of disk io blocking latencies (in microseconds)\n")
 
-        foreach (name in stats) {
-            printf("pid %d:\n", name)
-            printf("max/avg/min: %d/%d/%d\n", @max(stats[name]), @avg(stats[name]), @min(stats[name]))
-            print(@hist_log(stats[name]))
+        foreach (pid in stats) {
+            printf("pid %d:\n", pid)
+            printf("max/avg/min: %d/%d/%d\n", @max(stats[pid]), @avg(stats[pid]), @min(stats[pid]))
+            print(@hist_log(stats[pid]))
         }
     }
 }
 
 probe begin {
-    printf("Start tracing %d ($^exec_path)...\nPlease wait for %d seconds.\n\n",
-           target(), $^arg_time)
+    printf("Start tracing ($^target) ($^exec_path)...\n")
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n\n")
+    %:
+    printf("Hit Ctrl-C to end.\n\n")
+    %)
 }

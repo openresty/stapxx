@@ -183,7 +183,7 @@ if (defined $master_pid) {
     }
 
     $StdVars{pid_ok} = gen_pid_test_condition(\@pids);
-    $StdVars{target} = join "|", @pids;
+    $StdVars{target} = "@pids";
 
     my $pid = $pids[0];
     process_dso($pid);

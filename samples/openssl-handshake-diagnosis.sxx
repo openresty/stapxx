@@ -1,0 +1,61 @@
+#!/usr/bin/env stap++
+
+global cipher_stats
+global counted_session
+global aesni_used = 0
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\n", target())
+    %( "$^arg_time" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)
+
+probe end {
+    println("OpenSSL handshake disgnosis:")
+    println("AES-NI:")
+    if (aesni_used) {
+        println("\ton")
+    } else {
+        println("\toff")
+    }
+
+    println("cipher usage:")
+    foreach (name in cipher_stats-) {
+        printf("\t%-32s\t%d\n", name, cipher_stats[name])
+    }
+}
+
+probe process("$^libcrypto_path").function("aesni_*")
+{
+    if (target() == pid()) {
+        aesni_used = 1
+    }
+}
+
+probe process("$^libssl_path").function("SSL_do_handshake").return
+{
+    if (target() == pid()) {
+        session = @entry(@var("s")->session)
+        if (session) {
+            if (!counted_session[session]) {
+                cipher = @cast(session, "ssl_session_st", "$^libssl_path")->cipher
+                if (cipher) {
+                    $*cipher := @cast(cipher, "ssl_cipher_st", "$^libssl_path")
+                    name = user_string($*cipher->name)
+                    cipher_stats[name]++
+
+                    counted_session[session] = 1;
+                }
+            }
+        }
+    }
+}

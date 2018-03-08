@@ -57,6 +57,7 @@ Table of Contents
     * [ngx-pcre-dist](#ngx-pcre-dist)
     * [ngx-pcre-top](#ngx-pcre-top)
     * [vfs-page-cache-misses](#vfs-page-cache-misses)
+    * [openssl-handshake-diagnosis](#openssl-handshake-diagnosis)
 * [Installation](#installation)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
@@ -1841,6 +1842,39 @@ Hit Ctrl-C to end.
 total read 29425 KB, 3350 pages added (page size: 4096B), size miss rate: 45%
 186 vfs.read operations, 49 missed operations, operation miss rate: 26%
 total read 20373 KB, 1792 pages added (page size: 4096B), size miss rate: 35%
+```
+
+[Back to TOC](#table-of-contents)
+
+openssl-handshake-diagnosis
+---------------------------
+This tool can analyze the ciphers used in SSL handshake via peeking at OpenSSL's
+`SSL_do_handshake`. It provides information below:
+
+* whether AES-NI is used in the handshake
+* the usage of different ciphers
+
+Note that the cipher usage is counted per SSL session. Therefore we could
+confirm if the SSL sessions are reused by comparing the cipher usage.
+
+Here is an example:
+
+```
+# making the ./stap++ tool visible in PATH:
+$ export PATH=$PWD:$PATH
+
+$ ./samples/openssl-handshake-diagnosis.sxx -x $(pidof nginx) --arg time=10
+Found exact match for libcrypto: /lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+Found exact match for libssl: /lib/x86_64-linux-gnu/libssl.so.1.0.0
+Start tracing 331 (/usr/local/openresty/nginx/sbin/nginx)...
+Please wait for 10 seconds...
+OpenSSL handshake disgnosis:
+AES-NI:
+    on
+cipher usage:
+    AES128-GCM-SHA256                   90
+    ECDHE-RSA-AES128-GCM-SHA256         72
+    ECDHE-RSA-AES256-GCM-SHA384         71
 ```
 
 [Back to TOC](#table-of-contents)

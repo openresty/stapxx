@@ -20,7 +20,7 @@ Table of Contents
     * [Shorthands](#shorthands)
         * [@pfunc(FUNCTION)](#pfuncfunction)
 * [Samples](#samples)
-    * [disk-io-blocking-vfs](#disk-io-blocking-vfs)
+    * [file-io-blocking](#file-io-blocking)
     * [ngx-rps](#ngx-rps)
     * [ngx-req-latency-distr](#ngx-req-latency-distr)
     * [ctx-switches](#ctx-switches)
@@ -239,8 +239,8 @@ Samples
 
 [Back to TOC](#table-of-contents)
 
-disk-io-blocking-vfs
---------------------
+file-io-blocking
+----------------
 
 Calculates the distribution of the file IO operation blocking latencies.
 The file IO operations include: `syscall.lseek`, `syscall.renameat`,
@@ -251,7 +251,7 @@ The file IO operations include: `syscall.lseek`, `syscall.renameat`,
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-    $ ./samples/disk-io-blocking-vfs.sxx -x 7367
+    $ ./samples/file-io-blocking.sxx -x 7367
     WARNING: Start tracing process 7367 (/path/to/some/program)...
     Hit Ctrl-C to end.
     ^C
@@ -286,10 +286,11 @@ $ ps -ef | grep nginx
 resty     70084      1  0 Mar10 ?        00:00:00 nginx: master process nginx
 resty     70085  70084  0 Mar10 ?        00:00:06 nginx: worker process
 resty     70086  70084  0 Mar10 ?        00:00:06 nginx: worker process
-$ ./samples/disk-io-blocking-vfs.sxx -m 70084 --arg time=20
+$ ./samples/file-io-blocking.sxx -m 70084 --arg time=20
 ```
 
-We can also see from the example above that we can limit the sampling period by specifying the `--arg time=SECONDS` option.
+We can also see from the example above that we can limit the sampling period by
+specifying the `--arg time=SECONDS` option.
 
 [Back to TOC](#table-of-contents)
 

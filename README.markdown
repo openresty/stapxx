@@ -981,7 +981,7 @@ Here is an example:
     $ flamegraph.pl --countname=bytes \
             --title="Memory Leak Flame Graph" a.cbt > a.svg
 
-Yu can now open the "Memory Leak Flame Graph" file, `a.svg`, in your favorite web browser.
+You can now open the "Memory Leak Flame Graph" file, `a.svg`, in your favorite web browser.
 
 The tools `stackcollapse-stap.pl` and `flamegraph.pl` are from the FlameGraph repository by Brendan Gregg:
 
@@ -1576,7 +1576,7 @@ Count the number of used nginx connections and open files in the specified nginx
 $ export PATH=$PWD:$PATH
 
 # assuming the target process has the pid 6259.
-$ ./samples/ngx-count-conns -x 6259
+$ ./samples/ngx-count-conns.sxx -x 6259
 Start tracing 6259 (/opt/nginx/sbin/nginx)...
 
 ====== CONNECTIONS ======

@@ -1576,7 +1576,7 @@ Count the number of used nginx connections and open files in the specified nginx
 $ export PATH=$PWD:$PATH
 
 # assuming the target process has the pid 6259.
-$ ./samples/ngx-count-conns -x 6259
+$ ./samples/ngx-count-conns.sxx -x 6259
 Start tracing 6259 (/opt/nginx/sbin/nginx)...
 
 ====== CONNECTIONS ======

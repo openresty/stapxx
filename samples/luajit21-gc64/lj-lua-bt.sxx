@@ -1,0 +1,49 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit_gc64
+
+function process() {
+    if (@defined(@var("globalL", "$^exec_path"))) {
+        mL = @var("globalL", "$^exec_path")
+
+    } else {
+        mL = ngx_lua_get_main_lua_vm()
+    }
+
+    if (mL == 0) {
+        return 0
+    }
+
+    g = luajit_G(mL)
+    if (g == 0) {
+        return 0
+    }
+
+    L = luajit_cur_thread(g)
+    if (L == 0) {
+        return 0
+    }
+
+    bt = luajit_backtrace(L, g, 0)
+    if (bt != "") {
+        print(bt)
+        return 1
+    }
+
+    return 0
+}
+
+probe timer.profile
+{
+    if (pid() == target()) {
+        if (process()) {
+            exit()
+        }
+    }
+}
+
+probe begin
+{
+    printf("Start tracing %d ($^exec_path)\n", target())
+}

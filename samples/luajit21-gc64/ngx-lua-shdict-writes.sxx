@@ -11,7 +11,7 @@
 @define NGX_HTTP_LUA_SHDICT_SAFE_STORE %( 0x0004 %)
 
 
-@use luajit64
+@use luajit_gc64
 
 
 global zone_names

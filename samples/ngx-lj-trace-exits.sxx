@@ -34,7 +34,8 @@ probe @pfunc(ngx_http_free_request)
     }
 }
 
-probe process("$^libluajit_path").function("lj_trace_exit") {
+probe process("$^libluajit_path").function("lj_trace_exit"),
+      process("$^libluajit_path").function("lj_vm_exit_interp") {
     if (active_req) {
         req_exits[active_req]++
     }

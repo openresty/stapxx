@@ -47,7 +47,7 @@ probe process("$^exec_path").function("ngx_http_lua_ffi_exec_regex")
 
 function gcref(gcr)
 {
-    return @cast(gcr, "GCRef", "$^libluajit_path")->gcptr32
+    return @cast(gcr, "GCRef", "$^libluajit_path")->gcptr64
 }
 
 function gcval(o)

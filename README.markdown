@@ -63,6 +63,11 @@ Table of Contents
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
 
+Status
+======
+
+**IMPORTANT!!! This project is no longer maintained and our focus has been shifted to a much better dynamic tracing platform named [OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
+
 Synopsis
 ========
 
@@ -236,6 +241,10 @@ is equivalent to
 
 Samples
 =======
+
+**IMPORTANT!!! The sample tools below are no longer maintained and our focus has been
+shifted to a much better dynamic tracing platform named
+[OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
 
 [Back to TOC](#table-of-contents)
 

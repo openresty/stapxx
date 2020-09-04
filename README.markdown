@@ -66,7 +66,9 @@ Table of Contents
 Status
 ======
 
-**IMPORTANT!!! This project is no longer maintained and our focus has been shifted to a much better dynamic tracing platform named [OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
+**IMPORTANT!!! This project is no longer maintained and our focus has been shifted to a much better dynamic tracing platform named [OpenResty XRay](https://openresty.com/en/xray/). Existing users of the tools here are recommended to switch too.**
+
+The stap++ language is now superseded by the [Y lang](https://doc.openresty.com/en/ylang/) as part of the [OpenResty XRay](https://openresty.com/en/xray/) platform.
 
 Synopsis
 ========
@@ -740,12 +742,16 @@ Which means the ID 82 corresponds to the "string.dump" builtin. The IDs of built
 ngx-lj-lua-stacks
 -----------------
 
+**WARNING!!!** This tool has many bugs and is obsoleted by [OpenResty XRay](https://openresty.com/en/xray/). See also the blog post ["Introduction to Lua-Land CPU Flame Graphs"](https://blog.openresty.com/en/lua-cpu-flame-graph/).
+
 This tool has been renamed to [lj-lua-stacks](#lj-lua-stacks) because it is no longer specific to Nginx.
 
 [Back to TOC](#table-of-contents)
 
 lj-lua-stacks
 -------------
+
+**WARNING!!!** This tool has many bugs and is obsoleted by [OpenResty XRay](https://openresty.com/en/xray/). See also the blog post ["Introduction to Lua-Land CPU Flame Graphs"](https://blog.openresty.com/en/lua-cpu-flame-graph/).
 
 This tool samples Lua backtraces in the running LuaJIT 2.1 VM of the specified `luajit` process or `nginx` worker process (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module). The timer hook API of the Linux kernel is used for relatively even sampling according to the CPU time usage.
 

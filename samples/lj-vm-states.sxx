@@ -27,7 +27,7 @@ function process_timer_event()
 
     $*g := @cast(g, "global_State", "$^libluajit_path")
 
-    gco = $*g->cur_L->gcptr32
+    gco = $*g->cur_L->gcptr64
     $*gco := @cast(gco, "GCobj", "$^libluajit_path")
 
     L = &$*gco->th
@@ -62,7 +62,7 @@ function process_timer_event()
                 states["C"]++
 
             } else if (vmstate == -3) {
-                if ($*g->jit_base->ptr32) {
+                if ($*g->jit_base->ptr64) {
                     states["NG"]++
 
                 } else {

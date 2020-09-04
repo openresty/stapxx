@@ -72,7 +72,7 @@ function process(L)
         printf("main machine code area size: %d bytes\n", mc_size)
     }
 
-    cts = $*g->ctype_state->ptr32
+    cts = $*g->ctype_state->ptr64
     $*cts := @cast(cts, "CTState", "$^libluajit_path")
     if (cts) {
         printf("C callback machine code size: %d bytes\n", @CALLBACK_MCODE_SIZE)
@@ -158,7 +158,7 @@ function process(L)
 
     } else {
         /* for LuaJIT 2.1 */
-        sizetmpbuf = $*g->tmpbuf->e->ptr32 - $*g->tmpbuf->b->ptr32
+        sizetmpbuf = $*g->tmpbuf->e->ptr32 - $*g->tmpbuf->b->ptr64
     }
 
     if (sizetmpbuf) {

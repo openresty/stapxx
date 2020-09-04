@@ -20,6 +20,7 @@ Table of Contents
     * [Shorthands](#shorthands)
         * [@pfunc(FUNCTION)](#pfuncfunction)
 * [Samples](#samples)
+    * [file-io-blocking](#file-io-blocking)
     * [ngx-rps](#ngx-rps)
     * [ngx-req-latency-distr](#ngx-req-latency-distr)
     * [ctx-switches](#ctx-switches)
@@ -250,6 +251,61 @@ shifted to a much better dynamic tracing platform named
 
 [Back to TOC](#table-of-contents)
 
+file-io-blocking
+----------------
+
+Calculates the distribution of the file IO operation blocking latencies.
+The file IO operations include: `syscall.lseek`, `syscall.renameat`,
+`syscall.open`, `syscall.close`, `syscall.sendfile*`, `vfs.read*`,
+`vfs.write*`, `syscall.*stat*`, `syscall.unlink`, `syscall.mkdir`,
+`syscall.rmdir`.
+
+    # making the ./stap++ tool visible in PATH:
+    $ export PATH=$PWD:$PATH
+
+    $ ./samples/file-io-blocking.sxx -x 7367
+    WARNING: Start tracing process 7367 (/path/to/some/program)...
+    Hit Ctrl-C to end.
+    ^C
+    Distribution of file IO blocking latencies (in microseconds)
+    pid 7367:
+    max/avg/min: 15412/8/0
+    value |-------------------------------------------------- count
+        0 |                                                      60
+        1 |@                                                    920
+        2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   30009
+        4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  30862
+        8 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@          25383
+       16 |@@@@@@@@@@@@@@@                                     9384
+       32 |@                                                    965
+       64 |                                                     115
+      128 |                                                       2
+      256 |                                                       0
+      512 |                                                       0
+     1024 |                                                       1
+     2048 |                                                       0
+     4096 |                                                       0
+     8192 |                                                       2
+    16384 |                                                       0
+    32768 |                                                       0
+
+Also we can use `-m xxxx` to specify the Nginx master process id,
+then it will monitor all of the Nginx worker processes. For example:
+
+```shell
+# making the ./stap++ tool visible in PATH:
+$ ps -ef | grep nginx
+resty     70084      1  0 Mar10 ?        00:00:00 nginx: master process nginx
+resty     70085  70084  0 Mar10 ?        00:00:06 nginx: worker process
+resty     70086  70084  0 Mar10 ?        00:00:06 nginx: worker process
+$ ./samples/file-io-blocking.sxx -m 70084 --arg time=20
+```
+
+We can also see from the example above that we can limit the sampling period by
+specifying the `--arg time=SECONDS` option.
+
+[Back to TOC](#table-of-contents)
+
 ngx-rps
 -------
 
@@ -286,58 +342,58 @@ Nginx worker process at real time:
     # making the ./stap++ tool visible in PATH:
     $ export PATH=$PWD:$PATH
 
-    $ ./samples/ngx-req-latency-distr.sxx -x 28078
-    WARNING: Start tracing process 28078 (/path/to/some/program)...
+    $ ./samples/ngx-req-latency-distr.sxx -x 28574
+    Start tracing process (28574) (/usr/local/openresty/nginx/sbin/nginx)...
+    Hit Ctrl-C to end.
     ^C
-    Distribution of the main request latencies (in microseconds)
-    (min/avg/max: 92/242181/42808832)
-        value |-------------------------------------------------- count
-           16 |                                                      0
-           32 |                                                      0
-           64 |                                                      8
-          128 |                                                      1
-          256 |                                                      3
-          512 |@@@@@                                               274
-         1024 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  2474
-         2048 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     1547
-         4096 |@@@@@@@@@@@@@@@@@@@                                 952
-         8192 |@@@@@@@@@@                                          500
-        16384 |@@@@@@@                                             359
-        32768 |@@@@@@@@                                            414
-        65536 |@@@@@@@@@@@@                                        644
-       131072 |@@@@@@@@@@@@@@@@@                                   851
-       262144 |@@@@@@@@@@@@                                        614
-       524288 |@@@@@@                                              334
-      1048576 |@@                                                  147
-      2097152 |                                                     46
-      4194304 |                                                     24
-      8388608 |@                                                    64
-     16777216 |                                                      1
-     33554432 |                                                      1
-     67108864 |                                                      0
-    134217728 |                                                      0
-
-One can also filter out requests by a specified request method name via the `--arg method=METHOD` option. For instance,
-
-    $ ./samples/ngx-req-latency-distr.sxx -x 5447 --arg method=POST --arg time=60
-    Start tracing process 5447 (/opt/nginx/sbin/nginx)...
-    Please wait for 60 seconds...
-    (Tracing only POST request methods)
-
-    Distribution of the main request latencies (in microseconds) for 52 samples:
-    (min/avg/max: 1167/8373/28281)
+    Distribution of the request latencies (in microseconds) for 24304 samples:
+    (pid: 28574 min/avg/max: 25/118/12426)
     value |-------------------------------------------------- count
-      256 |                                                    0
-      512 |                                                    0
-     1024 |@@                                                  2
-     2048 |@@@@@@@@                                            8
-     4096 |@@@@@@@@@@@@@@@@@@@@@@@                            23
-     8192 |@@@@@@@@@@@@@@                                     14
-    16384 |@@@@@                                               5
-    32768 |                                                    0
-    65536 |                                                    0
+        4 |                                                       0
+        8 |                                                       0
+       16 |                                                       4
+       32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  14054
+       64 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                   9552
+      128 |@                                                    431
+      256 |                                                      27
+      512 |                                                       5
+     1024 |                                                      28
+     2048 |                                                      51
+     4096 |                                                      97
+     8192 |                                                      55
+    16384 |                                                       0
+    32768 |                                                       0
 
-We can also see from the example above that we can limit the sampling period by specifying the `--arg time=SECONDS` option.
+
+    Distribution of latencies between different requests (in microseconds) for 24303 samples:
+    (pid: 28574 min/avg/max: 4/87/3722)
+    value |-------------------------------------------------- count
+        1 |                                                       0
+        2 |                                                       0
+        4 |                                                     136
+        8 |                                                     104
+       16 |                                                      74
+       32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                       8065
+       64 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@  13463
+      128 |@@@@@@@@                                            2269
+      256 |                                                     174
+      512 |                                                       7
+     1024 |                                                       2
+     2048 |                                                       9
+     4096 |                                                       0
+     8192 |                                                       0
+
+* `--arg method=METHOD`: filter requests by a specified request method name.
+* `--arg uri=URI`: filter requests by a specified request uri.
+* `--arg time=SECONDS`: limit the sampling period.
+* `-m xxxx`: monitor all of the Nginx worker processes by a specified Nginx master process.
+
+For instance,
+
+    $ ./samples/ngx-req-latency-distr.sxx -m 28573 --arg time=20 --arg uri=/test --arg method=GET
+    Start tracing process (28574 28575 28577) (/usr/local/openresty/nginx/sbin/nginx)...
+    Please wait for 20 seconds...
+    ......
 
 [Back to TOC](#table-of-contents)
 

@@ -1,72 +1,115 @@
 #!/usr/bin/env stap++
 
-global begin_times
-global latencies
-global method_id
+@use nginx.request
 
-probe @pfunc(ngx_http_handler) {
-    if (pid() == target() && $r == $r->main) {
-        if ("$^arg_method :default()" != "") {
-            if (method_id == 0) {
-                if ($r->method_name->len > 0) {
-                    method = user_string_n($r->method_name->data, $r->method_name->len)
-                    //printf("found method %s\n", method)
-                    if (method == "$^arg_method") {
-                        method_id = $r->method
-                        //printf("found method id %d\n", method_id)
-                    }
+global begin_times, pre_end_time
+global latencies, req_latencies
+global init_conns
+global pid, matched_r, matched
+global log_r
+
+probe @pfunc(ngx_http_create_request)
+{
+    if ($^pid_ok) {
+        init_conns[$c, pid()] = gettimeofday_us()
+    }
+}
+
+probe @pfunc(ngx_http_close_connection) {
+    delete init_conns[$c, pid()]
+}
+
+probe @pfunc(ngx_http_process_request) {
+    pid = pid()
+
+    if ($^pid_ok) {
+        begin_time = init_conns[$r->connection, pid()]
+        if (begin_time) {
+            matched_r[$r] = 1
+            %( "$^arg_uri :default()" == "" %?
+            %:
+                if (ngx_req_uri($r) != "$^arg_uri") {
+                    delete matched_r[$r]
+                }
+            %)
+
+            %( "$^arg_method :default()" == "" %?
+            %:
+                if (ngx_req_method($r) != "$^arg_method") {
+                    delete matched_r[$r]
+                }
+            %)
+
+            if (matched_r[$r]) {
+                begin_times[$r] = begin_time
+
+                if (pre_end_time) {
+                    req_latencies[pid] <<< begin_times[$r] - pre_end_time
+                    pre_end_time = 0
                 }
             }
-
-            if (method_id && method_id == $r->method) {
-                begin_times[$r] = gettimeofday_us()
-            }
-
-        } else {
-            begin_times[$r] = gettimeofday_us()
         }
     }
 }
 
 probe @pfunc(ngx_http_log_request) {
-    if (pid() == target()) {
-        begin = begin_times[$r]
-        if (begin) {
-            latencies <<< gettimeofday_us() - begin
-            delete begin_times[$r]
+    if ($^pid_ok && matched_r[$r]) {
+        log_r = $r
+    }
+}
+
+probe @pfunc(ngx_http_log_request).return {
+    if ($^pid_ok && log_r) {
+        begin_time = begin_times[log_r]
+        if (begin_time) {
+            pre_end_time = gettimeofday_us()
+            latencies[pid()] <<< pre_end_time - begin_time
+            matched = 1
+            delete begin_times[log_r]
         }
+
+        delete matched_r[log_r]
+        log_r = 0
     }
 }
 
 probe begin {
-    printf("Start tracing process %d ($^exec_path)...\n", target())
+    printf("Start tracing process ($^target) ($^exec_path)...\n")
     %( "$^arg_time :default()" != ""  %?
     printf("Please wait for $^arg_time seconds...\n")
     %:
     printf("Hit Ctrl-C to end.\n")
     %)
-
-    if ("$^arg_method" != "") {
-        printf("(Tracing only $^arg_method request methods)\n")
-    }
 }
 
-%( "$^arg_time" != ""  %?
+%( "$^arg_time :default()" != ""  %?
 probe timer.s($^arg_time) {
     exit()
 }
 %)
 
 probe end {
-    count = @count(latencies)
-    if (count == 0) {
+    if (!matched) {
         printf("\nNo samples found so far.\n")
 
     } else {
-        printf("\nDistribution of the main request latencies (in microseconds) for %d samples:\n",
-               count)
-        printf("(min/avg/max: %d/%d/%d)\n", @min(latencies), @avg(latencies),
-               @max(latencies))
-        print(@hist_log(latencies))
+
+        foreach(pid in latencies) {
+            count = @count(latencies[pid])
+            printf("\nDistribution of the request latencies (in microseconds) for %d samples:\n", count)
+            printf("(pid: %d min/avg/max: %d/%d/%d)\n", pid, @min(latencies[pid]), @avg(latencies[pid]),
+                   @max(latencies[pid]))
+            print(@hist_log(latencies[pid]))
+            print("\n")
+        }
+
+        foreach(pid in req_latencies) {
+            count = @count(req_latencies[pid])
+            printf("\nDistribution of latencies between different requests (in microseconds) for %d samples:\n",
+                   count)
+            printf("(pid: %d min/avg/max: %d/%d/%d)\n", pid, @min(req_latencies[pid]),
+                   @avg(req_latencies[pid]), @max(req_latencies[pid]))
+            print(@hist_log(req_latencies[pid]))
+        }
     }
 }

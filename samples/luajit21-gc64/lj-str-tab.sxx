@@ -1,0 +1,116 @@
+#!/usr/bin/env stap++
+
+@use nginx.lua
+@use luajit_gc64
+
+@define TSTR    %( 4 %)
+
+global bucket_lens, bucket_lens2, bucket_len_squared, str_lens
+
+probe @pfunc(ngx_process_events_and_timers)?, timer.profile
+{
+    if (pid() == target()) {
+        if (@defined(@var("globalL", "$^exec_path"))) {
+            L = @var("globalL", "$^exec_path")
+
+        } else {
+            L = ngx_lua_get_main_lua_vm()
+        }
+
+        if (L == 0) {
+            printf("Failed to get the main Lua VM\n")
+            exit()
+        }
+
+        process(L)
+    }
+}
+
+function process(L)
+{
+    begin = gettimeofday_us()
+
+    g = luajit_G(L)
+    $*g := @cast(g, "global_State", "$^libluajit_path")
+
+    strmask = $*g->strmask
+    strnum = $*g->strnum
+
+    printf("string count: %d\n", strnum)
+    printf("bucket count: %d\n", strmask + 1)
+    printf("load factor: %d%%\n\n", strnum * 100/(strmask + 1))
+
+    strhash = $*g->strhash
+    $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
+
+    n = 0
+    done = 0
+    for (i = 0; i <= strmask; i++) {
+        p = &$*strhash[i]
+
+        depth = 0
+        while (p) {
+            o = luajit_gcref(p)
+            if (o == 0) {
+                break;
+            }
+
+            $*o := @cast(o, "GCobj", "$^libluajit_path")
+            gct = $*o->gch->gct
+            if (gct != @TSTR) {
+                error(sprintf("Bad string type: %d", gct))
+            }
+            size = luajit_objlen(o, @TSTR, g)
+            str_lens <<< size
+
+            depth++
+
+            if (++n == strnum) {
+                done = 1
+                break
+            }
+
+            p = &$*o->gch->nextgc
+        }
+
+        bucket_lens <<< depth
+
+        if (depth > 0) {
+            bucket_lens2 <<< depth
+            bucket_len_squared <<< depth * depth
+        }
+
+        if (done) {
+            break
+        }
+    }
+
+    if (@count(str_lens) != strnum) {
+        warn("string count out of sync")
+    }
+
+    printf("%d strings: max=%d, avg=%d, min=%d, sum=%d (in bytes)\n",
+           @count(str_lens), @max(str_lens),
+           @avg(str_lens), @min(str_lens), @sum(str_lens))
+    print(@hist_log(str_lens))
+
+    printf("%d buckets: max=%d, avg=%d, min=%d, sum=%d (in entries)\n",
+           @count(bucket_lens), @max(bucket_lens),
+           @avg(bucket_lens), @min(bucket_lens), @sum(bucket_lens))
+    print(@hist_log(bucket_lens))
+
+    avg = @avg(bucket_lens2)
+    printf("%d non-empty buckets: max=%d, avg=%d, min=%d, sum=%d, var=%d (in entries)\n",
+           @count(bucket_lens2), @max(bucket_lens2),
+           avg, @min(bucket_lens2), @sum(bucket_lens2),
+           @avg(bucket_len_squared) - avg * avg)
+    print(@hist_linear(bucket_lens2, 1, 10, 1))
+
+    printf("%d microseconds elapsed in the probe handler.\n",
+           gettimeofday_us() - begin)
+    exit()
+}
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\n\n", target())
+}

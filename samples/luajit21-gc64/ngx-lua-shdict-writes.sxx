@@ -1,0 +1,72 @@
+#!/usr/bin/env stap++
+
+
+/*
+ * Copyright (C) Yichun Zhang (agentzh)
+ */
+
+
+@define NGX_HTTP_LUA_SHDICT_ADD     %( 0x0001 %)
+@define NGX_HTTP_LUA_SHDICT_REPLACE %( 0x0002 %)
+@define NGX_HTTP_LUA_SHDICT_SAFE_STORE %( 0x0004 %)
+
+
+@use luajit_gc64
+
+
+global zone_names
+
+
+function handler(L, flags)
+{
+    zone = luajit_touserdata(L, 1)
+    if (zone == 0) {
+        warn("failed to get user data")
+        return 0
+    }
+
+    dict = zone_names[zone]
+    if (dict == "") {
+        //printf("generating name...\n")
+        $*zone := @cast(zone, "ngx_shm_zone_t", "$^exec_path")
+        ctx = $*zone->data
+        $*ctx := @cast(ctx, "ngx_http_lua_shdict_ctx_t", "$^exec_path")
+        //printf("zone == %p\n", zone)
+        dict = user_string_n($*ctx->name->data, $*ctx->name->len)
+        zone_names[zone] = dict
+    }
+
+    //printf("dict == %s\n", name)
+    if ("$^arg_dict :default()" != "" && dict != "$^arg_dict") {
+        return 0
+    }
+
+    if (flags & @NGX_HTTP_LUA_SHDICT_ADD) {
+        op = "add"
+
+    } else if (flags & @NGX_HTTP_LUA_SHDICT_REPLACE) {
+        op = "replace"
+
+    } else {
+        op = "set"
+    }
+
+    if (flags & @NGX_HTTP_LUA_SHDICT_SAFE_STORE) {
+        op = "safe_" . op
+    }
+
+    printf("[%d] %s key=%s value_len=%d dict=%s\n", gettimeofday_s(),
+           op, luajit_tostring(L, 2), luajit_tostringlen(L, 3), dict)
+}
+
+
+probe process("$^exec_path").function("ngx_http_lua_shdict_set_helper")
+{
+    handler($L, $flags)
+}
+
+
+probe begin
+{
+    warn(sprintf("Tracing process %d ($^exec_path).\nHit Ctrl-C to end.\n", target()))
+}

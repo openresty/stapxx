@@ -1,0 +1,218 @@
+#!/usr/bin/env stap++
+
+@use luajit_gc64
+
+@define now %(
+    %( "$^arg_utime :default()" != "" %?
+    cputime_to_usecs(task_utime())
+    %:
+    gettimeofday_us()
+    %)
+%)
+
+global regex
+global gmatch_regex
+global datalen
+global begin
+global exectimes
+global datalens
+global compiled
+global TL_TSTR = 4294967291
+global LJ_TUDATA = 4294967283
+global found = 0
+
+$*sizeof_TValue := &@cast(0, "TValue", "$^libluajit_path")[1]
+$*o := @cast(o, "TValue", "$^libluajit_path")
+$*L := @cast(L, "lua_State", "$^libluajit_path")
+$*gcobj := @cast(gcobj, "GCobj", "$^libluajit_path")
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)\n", target())
+    %( "$^arg_time :default()" != ""  %?
+    printf("Please wait for $^arg_time seconds...\n")
+    %:
+    printf("Hit Ctrl-C to end.\n")
+    %)
+}
+
+probe process("$^exec_path").function("ngx_http_lua_ffi_exec_regex")
+{
+    if (target() == pid() && regex == "") {
+        re = $re
+        $*re := @cast(re, "ngx_http_lua_regex_t", "$^exec_path")
+        regex = user_string_warn($*re->pattern)
+        //printf("regex: %s\n", regex)
+    }
+}
+
+function gcref(gcr)
+{
+    return @cast(gcr, "GCRef", "$^libluajit_path")->gcptr32
+}
+
+function gcval(o)
+{
+    return gcref(&@cast(o, "TValue", "$^libluajit_path")->gcr)
+}
+
+function strdata(s)
+{
+    return s + &@cast(0, "GCstr", "$^libluajit_path")[1]
+}
+
+probe process("$^exec_path").function("ngx_http_lua_ngx_re_gmatch_iterator")
+{
+    if (target() == pid()) {
+        L = $L
+        fn = luajit_frame_func(L)
+        $*fn := @cast(fn, "GCfunc", "$^libluajit_path")
+        //printf("upvalues: %d\\n", $fn->c->nupvalues)
+        if ($*fn->c->nupvalues >= 3) {
+            o = &$*fn->c->upvalue[1] // the 2nd upvalue
+            //printf("upvalue type: %d == $LJ_TUDATA\\n", $o->it)
+                if (@cast(o, "TValue", "$^libluajit_path")->it == LJ_TUDATA) {
+                    gcobj = gcval(o)
+                    ud = &$*gcobj ->ud
+                    regex = compiled[ud]
+                }
+            }
+    }
+}
+
+probe process("$^exec_path").function("ngx_http_lua_ngx_re_gmatch")
+{
+    if (target() == pid()) {
+        delete compiled  // XXX this is a hack
+        L = $L
+        o = $*L->base + $*sizeof_TValue * (2 - 1)
+        if (o < $*L->top && $*o->it == TL_TSTR) {
+            gcobj = gcval(o)
+            str = &$*gcobj->str
+            $*str := &@cast(str, "GCstr", "$^libluajit_path")
+            //printf("gmatch regex: %s\\n", user_string_n_warn(strdata(str), $*str->len))
+            gmatch_regex = user_string_n_warn(strdata(str), $*str->len)
+        } else {
+            gmatch_regex = ""
+        }
+    }
+}
+
+probe process("$^libluajit_path").function("lua_pushcclosure") {
+    if (target() == pid() && gmatch_regex != "") {
+        L = $L
+        //compiled[$ctx->regex] = gmatch_regex
+        o = $*L->top + $*sizeof_TValue * -2
+        //printf("type %d == $LJ_TUDATA\\n", $o->it)
+        LJ_TUDATA = 4294967283
+        if ($*o->it == LJ_TUDATA) {
+            gcobj = gcval(o)
+            ud = &$*gcobj->ud
+            compiled[ud] = gmatch_regex
+        }
+        gmatch_regex = ""
+    }
+}
+
+probe process("$^exec_path").function("ngx_http_lua_ngx_re_gmatch").return
+{
+    if (target() == pid()) {
+        gmatch_regex = ""
+    }
+}
+
+probe process("$^exec_path").function("ngx_http_lua_ngx_re_sub_helper"),
+      process("$^exec_path").function("ngx_http_lua_ngx_re_match_helper") !,
+      process("$^exec_path").function("ngx_http_lua_ngx_re_match")
+{
+    if (target() == pid()) {
+        L = $L
+        o = $*L->base + $*sizeof_TValue * (2 - 1)
+        if (o < $*L->top && $*o->it == TL_TSTR) {
+            gcobj = gcval(o)
+            str = &$*gcobj->str
+            //printf("regex: %s\\n", user_string_n_warn(strdata(str), $*str->len))
+            regex = user_string_n_warn(strdata(str), $*str->len)
+        }
+    }
+}
+
+probe process("$^libpcre_path").function("pcre_exec")
+{
+    if (target() == pid()) {
+        begin = @now
+        datalen = $length
+    }
+}
+
+%( "$^arg_worst_time :default()" != "" %?
+
+probe process("$^libpcre_path").function("pcre_exec").return
+{
+    if (target() == pid() && begin && regex != "") {
+        elapsed = @now - begin
+        max = exectimes[regex]
+        if (max < elapsed) {
+            exectimes[regex] = elapsed
+            datalens[regex] = datalen
+        }
+        regex = ""
+        elapsed = 0
+        begin = 0
+        found = 1
+    }
+}
+
+probe end
+{
+    if (!found) {
+        println("\nNo pcre_exec() calls found so far.")
+
+    } else {
+        println("\nTop N regexes with worst running time:")
+
+        i = 0
+        foreach (regex in exectimes- limit 10) {
+            i++
+            printf("%d. pattern /%s/: %dus (data size: %d)\n",
+                                       i, regex, exectimes[regex], datalens[regex])
+        }
+    }
+}
+
+%:
+
+probe process("$^libpcre_path").function("pcre_exec").return
+{
+    if (target() == pid() && begin && regex != "") {
+        elapsed = @now - begin
+        exectimes[regex] += elapsed
+        datalens[regex] += datalen
+        regex = ""
+        begin = 0
+        found = 1
+    }
+}
+
+probe end
+{
+    if (!found) {
+        println("\nNo pcre_exec() calls found so far.")
+
+    } else {
+        println("\nTop N regexes with longest total running time:")
+
+        i = 0
+        foreach (regex in exectimes- limit 10) {
+            i++
+            printf("%d. pattern /%s/: %dus (total data size: %d)\n",
+            i, regex, exectimes[regex], datalens[regex])
+        }
+    }
+}
+%)
+
+%("$^arg_time" != "" %?
+probe timer.s($^arg_time) {
+    exit()
+}
+%)

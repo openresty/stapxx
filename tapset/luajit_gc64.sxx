@@ -769,8 +769,8 @@ function luajit_backtrace(L, g, simple)
         }
 
         if (vmstate == -1 || vmstate == -2 || vmstate == -3) {
-            base = $*L->base
-            bt .= luajit_debug_dumpstack(L, 0, $^arg_depth, base, simple)
+            base_tv = $*L->base
+            bt .= luajit_debug_dumpstack(L, 0, $^arg_depth, base_tv, simple)
         }
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env stap++
 
 @use nginx.lua
-@use luajit
+@use luajit_gc64
 
 global bts, jitted
 

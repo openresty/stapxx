@@ -7,12 +7,16 @@
 $*pt := @cast(pt, "GCproto", "$^libluajit_path")
 
 
-//@define LJ_TLIGHTUD  %( 4294967292 %)
-@define LJ_TLIGHTUD  %( 4294901760 %)
+@define LJ_TLIGHTUD  %( 4294967292 %)
 @define LJ_TSTR  %( 4294967291 %)
 @define LJ_TUDATA  %( 4294967283 %)
 @define LJ_TTHREAD  %( 4294967289 %)
 @define LJ_TFUNC  %( 4294967287 %)
+
+
+@define LJ_VMST_INTERP %( 0 %)
+@define LJ_VMST_C %( 1 %)
+@define LJ_VMST_GC %( 2 %)
 
 
 @define TSTR    %( 4 %)
@@ -572,7 +576,7 @@ function luajit_debug_dumpstack(L, T, depth, base, simple)
                 break
             }
             nextframe = frame
-            
+
             if (@frame_islua(frame)) {
                 frame = @frame_prevl(frame)
 
@@ -726,7 +730,8 @@ function luajit_backtrace(L, g, simple)
     bt = ""
 
     vmstate = $*g->vmstate
-    if (vmstate >= 0 || (vmstate == -3 && $*g->jit_base->ptr64)) {
+    if (vmstate >= 0 // native (JITted) code
+        || (vmstate == ~@LJ_VMST_GC && $*g->jit_base->ptr64)) {
         /* compiled Lua code */
 
         T = luajit_get_trace(g, vmstate)
@@ -757,18 +762,18 @@ function luajit_backtrace(L, g, simple)
         */
 
         /*
-        if (vmstate == -3) {
+        if (vmstate == ~LJ_VMST_GC) {
             printf("HIT JIT GC: %s===\n", bt)
         }
         */
 
     } else {
 
-        if (vmstate == -1 && !$*L->cframe) {
+        if (vmstate == ~@LJ_VMST_INTERP && !$*L->cframe) {
             return ""
         }
 
-        if (vmstate == -1 || vmstate == -2 || vmstate == -3) {
+        if (vmstate == ~@LJ_VMST_INTERP || vmstate == ~@LJ_VMST_C || vmstate == ~@LJ_VMST_GC) {
             base_tv = $*L->base
             bt .= luajit_debug_dumpstack(L, 0, $^arg_depth, base_tv, simple)
         }

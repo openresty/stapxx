@@ -7,19 +7,10 @@ Table of Contents
 =================
 
 * [NAME](#name)
-* [Synopsis](#synopsis)
-* [Description](#description)
-* [Features](#features)
-    * [Standard Macro Variables](#standard-macro-variables)
-        * [$^exec_path](#exec_path)
-        * [$^libNAME_path](#libname_path)
-        * [$^arg_NAME](#arg_name)
-        * [Default values](#default-values)
-    * [User-defined Macro Variables](#user-defined-macro-variables)
-    * [Tapset Modules](#tapset-modules)
-    * [Shorthands](#shorthands)
-        * [@pfunc(FUNCTION)](#pfuncfunction)
+* [Status](#status)
+* [SystemTap Requirements](#systemtap-requirements)
 * [Samples](#samples)
+    * [Note on LuaJIT GC64 mode support](#note-on-luajit-gc64-mode-support)
     * [ngx-rps](#ngx-rps)
     * [ngx-req-latency-distr](#ngx-req-latency-distr)
     * [ctx-switches](#ctx-switches)
@@ -30,10 +21,10 @@ Table of Contents
     * [ngx-lj-vm-states](#ngx-lj-vm-states)
     * [lj-vm-states](#lj-vm-states)
     * [ngx-lj-trace-exits](#ngx-lj-trace-exits)
-    * [ngx-lj-lua-bt](#ngx-lj-lua-bt)
     * [lj-lua-bt](#lj-lua-bt)
-    * [ngx-lj-lua-stacks](#ngx-lj-lua-stacks)
     * [lj-lua-stacks](#lj-lua-stacks)
+    * [lj-lua-string-leaks](#lj-lua-string-leaks)
+    * [lj-lua-table-leaks](#lj-lua-table-leaks)
     * [epoll-et-lt](#epoll-et-lt)
     * [epoll-loop-blocking-distr](#epoll-loop-blocking-distr)
     * [sample-bt-leaks](#sample-bt-leaks)
@@ -58,195 +49,56 @@ Table of Contents
     * [ngx-pcre-top](#ngx-pcre-top)
     * [vfs-page-cache-misses](#vfs-page-cache-misses)
     * [openssl-handshake-diagnosis](#openssl-handshake-diagnosis)
-* [Installation](#installation)
+* [Synopsis](#synopsis)
+* [Description](#description)
+* [Features](#features)
+    * [Standard Macro Variables](#standard-macro-variables)
+        * [$^exec_path](#exec_path)
+        * [$^libNAME_path](#libname_path)
+        * [$^arg_NAME](#arg_name)
+        * [Default values](#default-values)
+    * [User-defined Macro Variables](#user-defined-macro-variables)
+    * [Tapset Modules](#tapset-modules)
+    * [Shorthands](#shorthands)
+        * [@pfunc(FUNCTION)](#pfuncfunction)
 * [Author](#author)
 * [Copyright and License](#copyright-and-license)
 * [See Also](#see-also)
 
 Status
 ======
+Unofficially maintained by Kong.
 
-**IMPORTANT!!! This project is no longer maintained and our focus has been shifted to a much better dynamic tracing platform named [OpenResty XRay](https://openresty.com/en/xray/). Existing users of the tools here are recommended to switch too.**
+SystemTap Requirements
+======================
 
-The stap++ language is now superseded by the [Y lang](https://doc.openresty.com/en/ylang/) as part of the [OpenResty XRay](https://openresty.com/en/xray/) platform.
+This tool has been tested to work with latest version of Debian (buster) and Fedora (>= 29). However,
+for both of those distributions it is necessary to compile SystemTap from the latest source code
+in order for the tools to function properly. You may found latest SystemTap releases inside the
+[official release directory](https://sourceware.org/systemtap/ftp/releases/).
 
-Synopsis
-========
-
-```bash
-    $ stap++ -I ./tapset -x 12345 --arg limit=10 samples/ngx-upstream-post-conn.sxx
-    $ stap++ -e 'probe begin { println("hello") exit() }'
-```
-
-Description
-===========
-
-This interpreter adds some simple macro language extensions to the systemtap scripting language.
-
-Efforts has been made to ensure that this macro language expansion does
-not affect the source line numbers so that the line numbers reported by `stap` are exactly the same in the original `.sxx` source files.
-
-Features
-========
-
-[Back to TOC](#table-of-contents)
-
-Standard Macro Variables
-------------------------
-
-[Back to TOC](#table-of-contents)
-
-### $^exec_path
-
-The variable `$^exec_path` is always evaluated to the path to the executable file
-for the pid specified by the `-x` or `--master` option.
-
-Here is an example:
-
-```stap
-    probe process("$^exec_path").function("blah") { ... }
-```
-
-When you specify the `--exec PATH` option on the command line, then
-this PATH is always used regardless of the presense of the `-x` or `--master` option.
-
-[Back to TOC](#table-of-contents)
-
-### $^libNAME_path
-
-This variable expands to the absolute path of the DSO library file specified by a pattern.
-
-`stap++` automatically scans all the loaded DSO files in the running process (if the `-x PID` option is specified) to find a match. If it fails to find a match, this variable will take the value of `$^exec_path`, that is, assuming the library is statically linked.
-
-Below is an example for tracing a user-land function in the libpcre library:
-
-```stap
-    probe process("$^libpcre_path").function("pcre_exec")
-    {
-        println("pcre_exec called")
-        print_ubacktrace()
-    }
-```
-
-[Back to TOC](#table-of-contents)
-
-### $^arg_NAME
-
-This variable can evaluate to the value of a specified command-line argument. For example, `$^arg_limit` is evaluated to the value of the command line argument `limit` specified like this:
-
-    stap++ --arg limit=1000
-
-You can dump out all the available arguments in the stap++ script by specifying the --args option, for example:
-
-    $ stap++ --args foo.sxx
-    --arg method=VALUE (default: )
-    --arg time=VALUE (default: 60)
-
-[Back to TOC](#table-of-contents)
-
-### Default values
-
-It's possible to specify a default value for a macro variable by means of the `default` trait, as in
-
-    foreach (key in stats- limit $^arg_limit :default(1000)) {
-        ...
-    }
-
-where `$^arg_limit` takes the default value 1000 when the user does not specify the `--arg limit=N` command-line option while invoking `stap++`.
-
-[Back to TOC](#table-of-contents)
-
-User-defined Macro Variables
-----------------------------
-
-It's possible to bind a `@cast()` or `@var()` expression to a user-defined macro variable of the form `$*NAME`. Here is an example,
-
-    sock = sockfd_lookup(fd)
-    $*sock := @cast(sock, "socket", "kernel")
-
-    printf(", sock->state:%d", $*sock->state)
-    state = $*sock->sk->__sk_common->skc_state
-    printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
-
-Note that we used the `:=` operator to bind a `@cast()` or `@var()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` or `@var()` expression.
-
-The scope of user variables is always limited to the current `.sxx` source file.
-
-[Back to TOC](#table-of-contents)
-
-Tapset Modules
---------------
-
-One can use the stap++ language to define new tapset module files and later use the `@use` directive to load the module in a main stap++ program file.
-
-For example, we can have a module file located at `./tapset/kernel/socket.sxx`:
-
-    // module kernel.socket
-    function socketfd_lookup(fd)
-    {
-        ...
-    }
-
-And then in a stap++ script file, `foo.sxx`, we can import this library like this
-
-    @use kernel.socket
-
-and in `foo.sxx`, we are now free to call the `socketfd_lookup` function defined in the `kernel.socket` module.
-
-Finally, we should invoke the `stap++` interpreter like this:
-
-    stap++ -I ./tapset foo.sxx ...
-
-Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules. The default module search paths are `.`, and `<bin-dir>/tapset`, where `<bin-dir>` is the directory where `stap++` sits in.
-
-Unlike `stap`, only the used stapset modules are processed so as to reduce startup time.
-
-One can `@use` multiple modules like this
-
-    @use kernel.socket
-    @use nginx.upstream
-
-or equivalently,
-
-    @use kernel.socket, nginx.upstream
-
-All those macro variables are free to use in the tapset module files.
-
-[Back to TOC](#table-of-contents)
-
-Shorthands
-----------
-
-[Back to TOC](#table-of-contents)
-
-### @pfunc(FUNCTION)
-
-This is equivalent to `process("$^exec_path").function("FUNCTION").
-
-For example,
-
-    probe @pfunc(ngx_http_upstream_finalize_request),
-          @pfunc(ngx_http_upstream_send_request)
-    {
-        ...
-    }
-
-is equivalent to
-
-    probe process("$^exec_path").function("ngx_http_upstream_finalize_request"),
-          process("$^exec_path").function("ngx_http_upstream_send_request")
-    {
-        ...
-    }
+As of Jan 2021, `systemtap-4.4.tar.gz` has been tested and confirmed to work well with the tools.
 
 [Back to TOC](#table-of-contents)
 
 Samples
 =======
 
-**IMPORTANT!!! The sample tools below are no longer maintained and our focus has been
-shifted to a much better dynamic tracing platform named
-[OpenResty XRay](https://openresty.com/en/xray). Existing users of the tools here are recommended to switch too.**
+Note on LuaJIT GC64 mode support
+--------------------------------
+
+Kong has put some effort into this project to make LuaJIT tools run with GC64 mode again.
+Currently, the following LuaJIT tracing tools are confirmed to work under GC64:
+
+* [lj-gc](#lj-gc)
+* [lj-lua-bt](#lj-lua-bt)
+* [lj-lua-stacks](#lj-lua-stacks)
+* [lj-lua-string-leaks](#lj-lua-string-leaks) (new)
+* [lj-lua-table-leaks](#lj-lua-table-leaks) (new)
+
+Non-GC64 mode support for LuaJIT has been removed from this fork. If you require running these tools
+under non-GC64 mode, please refer to the original [openresty/stapxx](https://github.com/openresty/stapxx)
+repository instead.
 
 [Back to TOC](#table-of-contents)
 
@@ -562,7 +414,7 @@ This tool has been renamed to [lj-vm-states](#lj-vm-states) because it is no lon
 [Back to TOC](#table-of-contents)
 
 lj-vm-states
-----------------
+------------
 
 This tool samples the LuaJIT's VM states in the specified `luajit` utility program or the specified nginx worker process (running the ngx_lua module) via kernel's timer hooks.
 
@@ -685,15 +537,8 @@ we can see that almost all the requests used compiled traces, which is great! An
 
 [Back to TOC](#table-of-contents)
 
-ngx-lj-lua-bt
--------------
-
-This tool has been renamed to [lj-lua-bt](#lj-lua-bt) because it is no longer specific to Nginx.
-
-[Back to TOC](#table-of-contents)
-
 lj-lua-bt
--------------
+---------
 
 This tool dumps out the current Lua backtrace in the running LuaJIT 2.1 VM in the specified "luajit" utility program or the specified nginx worker process
 (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module enabled).
@@ -739,19 +584,8 @@ Which means the ID 82 corresponds to the "string.dump" builtin. The IDs of built
 
 [Back to TOC](#table-of-contents)
 
-ngx-lj-lua-stacks
------------------
-
-**WARNING!!!** This tool has many bugs and is obsoleted by [OpenResty XRay](https://openresty.com/en/xray/). See also the blog post ["Introduction to Lua-Land CPU Flame Graphs"](https://blog.openresty.com/en/lua-cpu-flame-graph/).
-
-This tool has been renamed to [lj-lua-stacks](#lj-lua-stacks) because it is no longer specific to Nginx.
-
-[Back to TOC](#table-of-contents)
-
 lj-lua-stacks
 -------------
-
-**WARNING!!!** This tool has many bugs and is obsoleted by [OpenResty XRay](https://openresty.com/en/xray/). See also the blog post ["Introduction to Lua-Land CPU Flame Graphs"](https://blog.openresty.com/en/lua-cpu-flame-graph/).
 
 This tool samples Lua backtraces in the running LuaJIT 2.1 VM of the specified `luajit` process or `nginx` worker process (with the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) module). The timer hook API of the Linux kernel is used for relatively even sampling according to the CPU time usage.
 
@@ -874,6 +708,46 @@ See also
 
 1. The [lj-vm-states](#lj-vm-states) tool for sampling the LuaJIT VM states.
 1. Brendan Gregg's article "[Flame Graphs](http://dtrace.org/blogs/brendan/2011/12/16/flame-graphs/)".
+
+[Back to TOC](#table-of-contents)
+
+lj-lua-string-leaks
+-------------------
+
+This tools is developed by Kong, and can be used for generating a flamegraph showing where LuaJIT allocated string that are not being freed.
+
+The output is similar of that from `lj-lua-stacks`, except the total bytes of string allocated by each backtrace is outputted instead.
+
+When running this tool, it may be necessary to use the following arguments to avoid running out of resources by the tracer:
+
+```
+./samples/lj-lua-string-leaks.sxx -x 1234 -D MAXMAPENTRIES=1000000 -D STP_OVERLOAD_THRESHOLD=1000000000LL --skip-badvars
+```
+
+**Note:** Running this tool will slow down LuaJIT a lot (sometimes by 5-10x). Therefore it may not be suitable for running in
+a production environment.
+
+[Back to TOC](#table-of-contents)
+
+lj-lua-table-leaks
+------------------
+
+This tools is developed by Kong, and can be used for generating a flamegraph showing where LuaJIT allocated table that are not being freed.
+
+The output is similar of that from `lj-lua-stacks`, except the total bytes of table allocated by each backtrace is outputted instead.
+
+Note that the size a table uses does not always corresponds to the number of elements stored inside, but the actual capacity
+allocated by LuaJIT for the table. This means if you pre-allocate a large table with `table.new`, the table will consume
+a lot of memory even if there aren't any elements inserted into it yet.
+
+When running this tool, it may be necessary to use the following arguments to avoid running out of resources by the tracer:
+
+```
+./samples/lj-lua-table-leaks.sxx -x 1234 -D MAXMAPENTRIES=1000000 -D STP_OVERLOAD_THRESHOLD=1000000000LL --skip-badvars
+```
+
+**Note:** Running this tool will slow down LuaJIT a lot (sometimes by 5-10x). Therefore it may not be suitable for running in
+a production environment.
 
 [Back to TOC](#table-of-contents)
 
@@ -1727,7 +1601,7 @@ need to be an nginx process at all.
 [Back to TOC](#table-of-contents)
 
 ngx-pcre-dist
---------
+-------------
 This tool can analyse the PCRE regex executation time distribution.
 
 It requires uretprobes support in the Linux kernel.
@@ -1787,7 +1661,7 @@ This tool supports both the ngx_lua classic API and the lua-resty-core API.
 [Back to TOC](#table-of-contents)
 
 ngx-pcre-top
---------
+------------
 This tool can analyze the worst or accumulated PCRE executation time of the individual regex matches using the ngx_lua module's [ngx.re API](http://wiki.nginx.org/HttpLuaModule#ngx.re.match).
 
 Here is an example that analyzes the longest total running time, using accumulated regex execution time:
@@ -1894,14 +1768,181 @@ cipher usage:
 
 [Back to TOC](#table-of-contents)
 
-Installation
-============
+Synopsis
+========
 
-You need a recent enough Linux kernel (like 3.5+) *or* a older kernel with the utrace patch applied (for Linux distributions in the RedHat family, like RHEL, CentOS, and Fedora, the utrace patch should be included in their older kernels by default).
-
-You also need to install systemtap first. It is recommended to build it from the latest source. See this document for detailed instructions: http://openresty.org/#BuildSystemtap
+```bash
+    $ stap++ -I ./tapset -x 12345 --arg limit=10 samples/ngx-upstream-post-conn.sxx
+    $ stap++ -e 'probe begin { println("hello") exit() }'
+```
 
 [Back to TOC](#table-of-contents)
+
+Description
+===========
+
+This interpreter adds some simple macro language extensions to the systemtap scripting language.
+
+Efforts has been made to ensure that this macro language expansion does
+not affect the source line numbers so that the line numbers reported by `stap` are exactly the same in the original `.sxx` source files.
+
+[Back to TOC](#table-of-contents)
+
+Features
+========
+
+[Back to TOC](#table-of-contents)
+
+Standard Macro Variables
+------------------------
+
+[Back to TOC](#table-of-contents)
+
+### $^exec_path
+
+The variable `$^exec_path` is always evaluated to the path to the executable file
+for the pid specified by the `-x` or `--master` option.
+
+Here is an example:
+
+```stap
+    probe process("$^exec_path").function("blah") { ... }
+```
+
+When you specify the `--exec PATH` option on the command line, then
+this PATH is always used regardless of the presense of the `-x` or `--master` option.
+
+[Back to TOC](#table-of-contents)
+
+### $^libNAME_path
+
+This variable expands to the absolute path of the DSO library file specified by a pattern.
+
+`stap++` automatically scans all the loaded DSO files in the running process (if the `-x PID` option is specified) to find a match. If it fails to find a match, this variable will take the value of `$^exec_path`, that is, assuming the library is statically linked.
+
+Below is an example for tracing a user-land function in the libpcre library:
+
+```stap
+    probe process("$^libpcre_path").function("pcre_exec")
+    {
+        println("pcre_exec called")
+        print_ubacktrace()
+    }
+```
+
+[Back to TOC](#table-of-contents)
+
+### $^arg_NAME
+
+This variable can evaluate to the value of a specified command-line argument. For example, `$^arg_limit` is evaluated to the value of the command line argument `limit` specified like this:
+
+    stap++ --arg limit=1000
+
+You can dump out all the available arguments in the stap++ script by specifying the --args option, for example:
+
+    $ stap++ --args foo.sxx
+    --arg method=VALUE (default: )
+    --arg time=VALUE (default: 60)
+
+[Back to TOC](#table-of-contents)
+
+### Default values
+
+It's possible to specify a default value for a macro variable by means of the `default` trait, as in
+
+    foreach (key in stats- limit $^arg_limit :default(1000)) {
+        ...
+    }
+
+where `$^arg_limit` takes the default value 1000 when the user does not specify the `--arg limit=N` command-line option while invoking `stap++`.
+
+[Back to TOC](#table-of-contents)
+
+User-defined Macro Variables
+----------------------------
+
+It's possible to bind a `@cast()` or `@var()` expression to a user-defined macro variable of the form `$*NAME`. Here is an example,
+
+    sock = sockfd_lookup(fd)
+    $*sock := @cast(sock, "socket", "kernel")
+
+    printf(", sock->state:%d", $*sock->state)
+    state = $*sock->sk->__sk_common->skc_state
+    printf(", sock->sk->sk_state:%d (%s)\n", state, tcp_sockstate_str(state))
+
+Note that we used the `:=` operator to bind a `@cast()` or `@var()` expression to user variable `$*sock`, and later we reference it whenever we need that `@cast()` or `@var()` expression.
+
+The scope of user variables is always limited to the current `.sxx` source file.
+
+[Back to TOC](#table-of-contents)
+
+Tapset Modules
+--------------
+
+One can use the stap++ language to define new tapset module files and later use the `@use` directive to load the module in a main stap++ program file.
+
+For example, we can have a module file located at `./tapset/kernel/socket.sxx`:
+
+    // module kernel.socket
+    function socketfd_lookup(fd)
+    {
+        ...
+    }
+
+And then in a stap++ script file, `foo.sxx`, we can import this library like this
+
+    @use kernel.socket
+
+and in `foo.sxx`, we are now free to call the `socketfd_lookup` function defined in the `kernel.socket` module.
+
+Finally, we should invoke the `stap++` interpreter like this:
+
+    stap++ -I ./tapset foo.sxx ...
+
+Note the `-I ./tapset` option that specifies the search path for the stap++ tapset modules. The default module search paths are `.`, and `<bin-dir>/tapset`, where `<bin-dir>` is the directory where `stap++` sits in.
+
+Unlike `stap`, only the used stapset modules are processed so as to reduce startup time.
+
+One can `@use` multiple modules like this
+
+    @use kernel.socket
+    @use nginx.upstream
+
+or equivalently,
+
+    @use kernel.socket, nginx.upstream
+
+All those macro variables are free to use in the tapset module files.
+
+[Back to TOC](#table-of-contents)
+
+Shorthands
+----------
+
+[Back to TOC](#table-of-contents)
+
+### @pfunc(FUNCTION)
+
+This is equivalent to `process("$^exec_path").function("FUNCTION").
+
+For example,
+
+    probe @pfunc(ngx_http_upstream_finalize_request),
+          @pfunc(ngx_http_upstream_send_request)
+    {
+        ...
+    }
+
+is equivalent to
+
+    probe process("$^exec_path").function("ngx_http_upstream_finalize_request"),
+          process("$^exec_path").function("ngx_http_upstream_send_request")
+    {
+        ...
+    }
+
+[Back to TOC](#table-of-contents)
+
 
 Author
 ======
@@ -1916,6 +1957,7 @@ Copyright and License
 This module is licensed under the BSD license.
 
 Copyright (C) 2013-2017, by Yichun "agentzh" Zhang (章亦春) <agentzh@gmail.com>, OpenResty Inc.
+Copyright (C) 2021, by Kong Inc.
 
 All rights reserved.
 

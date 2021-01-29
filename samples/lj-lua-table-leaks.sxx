@@ -1,0 +1,98 @@
+#!/usr/bin/env stap++
+
+//@use nginx.lua
+@use luajit_gc64
+
+@define sizeof_TValue  %( &@cast(0, "TValue", "$^libluajit_path")[1] %)
+@define sizeof_Node %( &@cast(0, "Node", "$^libluajit_path")[1] %)
+$*t := @cast(t, "GCtab", "$^libluajit_path")
+
+global ptr_bt, bt_size
+
+function table_size(t) {
+    return $*t->asize * @sizeof_TValue + $*t->hmask * @sizeof_Node
+}
+
+function output_report() {
+    delete ptr_bt
+
+    foreach (bt in bt_size- limit $^arg_limit :default(1000)) {
+        total_size = bt_size[bt]
+
+        if (total_size <= $^arg_min :default(1024)) {
+            break
+        }
+        printf("%s\t%d\n", bt, total_size)
+    }
+}
+
+probe process("$^libluajit_path").function("lj_tab_resize").return
+{
+    if (pid() == target()) {
+        if (bt != "") {
+            bt = ptr_bt[@entry($t)]
+            oldsize = @entry(table_size($t))
+            newsize = table_size(@entry($t))
+
+            // printf("oldsize = %d, newsize = %d\n", oldsize, newsize)
+
+            bt_size[bt] -= oldsize
+            bt_size[bt] += newsize
+        }
+    }
+}
+
+probe process("$^libluajit_path").function("lj_tab_free")
+{
+    if (pid() == target()) {
+        bt = ptr_bt[$t]
+        size = table_size($t)
+
+        delete ptr_bt[$t]
+
+        if (bt != "" && size) {
+            bt_size[bt] -= size
+
+            if (bt_size[bt] <= 0) {
+                delete bt_size[bt]
+            }
+        }
+    }
+}
+
+probe process("$^libluajit_path").function("newtab").return
+{
+    if (pid() == target() && $return) {
+    //if ($return) {
+        bt = luajit_backtrace(@entry($L), luajit_G(@entry($L)), $^arg_detailed :default(0) ? 0 : 1)
+        if (bt != "") {
+            bt = "table:" . bt
+
+            ptr_bt[$return] = bt
+            size = table_size($return)
+            bt_size[bt] += size
+        }
+    }
+}
+
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time)
+{
+    warn("Time's up. Quitting now...\n")
+    exit()
+}
+%)
+
+probe end {
+    output_report()
+}
+
+probe begin
+{
+    warn(sprintf("Start tracing %d ($^exec_path)\n", target()))
+    %( "$^arg_time" != ""  %?
+    warn(sprintf("Please wait for $^arg_time seconds...\n"))
+    %:
+    warn("Hit Ctrl-C to end.\n")
+    %)
+}

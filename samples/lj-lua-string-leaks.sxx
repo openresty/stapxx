@@ -1,0 +1,76 @@
+#!/usr/bin/env stap++
+
+//@use nginx.lua
+@use luajit_gc64
+
+global ptr_bt, ptr_size, bt_size
+
+function output_report() {
+    delete ptr_bt
+    delete ptr_size
+
+    foreach (bt in bt_size- limit $^arg_limit :default(1000)) {
+        total_size = bt_size[bt]
+
+        if (total_size <= $^arg_min :default(1024)) {
+            break
+        }
+        printf("%s\t%d\n", bt, total_size)
+    }
+}
+
+probe process("$^libluajit_path").function("lj_str_free")
+{
+    if (pid() == target()) {
+        bt = ptr_bt[$s]
+        size = ptr_size[$s]
+
+        delete ptr_bt[$s]
+        delete ptr_size[$s]
+
+        if (bt != "" && size) {
+            bt_size[bt] -= size
+
+            if (bt_size[bt] <= 0) {
+                delete bt_size[bt]
+            }
+        }
+    }
+}
+
+probe process("$^libluajit_path").function("lj_str_new").return
+{
+    if (pid() == target() && $return && !ptr_size[$return]) {
+    //if ($return && !ptr_size[$return]) {
+        bt = luajit_backtrace(@entry($L), luajit_G(@entry($L)), $^arg_detailed :default(0) ? 0 : 1)
+        if (bt != "") {
+            bt = "string:" . bt
+
+            ptr_bt[$return] = bt
+            ptr_size[$return] = @entry($lenx)
+            bt_size[bt] += @entry($lenx)
+        }
+    }
+}
+
+%( "$^arg_time :default()" != ""  %?
+probe timer.s($^arg_time)
+{
+    warn("Time's up. Quitting now...\n")
+    exit()
+}
+%)
+
+probe end {
+    output_report()
+}
+
+probe begin
+{
+    warn(sprintf("Start tracing %d ($^exec_path)\n", target()))
+    %( "$^arg_time" != ""  %?
+    warn(sprintf("Please wait for $^arg_time seconds...\n"))
+    %:
+    warn("Hit Ctrl-C to end.\n")
+    %)
+}

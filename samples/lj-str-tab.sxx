@@ -33,14 +33,14 @@ function process(L)
     g = luajit_G(L)
     $*g := @cast(g, "global_State", "$^libluajit_path")
 
-    strmask = $*g->strmask
-    strnum = $*g->strnum
+    strmask = $*g->str->mask
+    strnum = $*g->str->num
 
     printf("string count: %d\n", strnum)
     printf("bucket count: %d\n", strmask + 1)
     printf("load factor: %d%%\n\n", strnum * 100/(strmask + 1))
 
-    strhash = $*g->strhash
+    strhash = $*g->str->tab
     $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
 
     n = 0

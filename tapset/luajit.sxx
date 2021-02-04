@@ -59,7 +59,7 @@ $*pt := @cast(pt, "GCproto", "$^libluajit_path")
 @define sizeof_SnapShot %( &@cast(0, "SnapShot", "$^libluajit_path")[1] %)
 @define sizeof_SnapEntry %( &@cast(0, "SnapEntry", "$^libluajit_path")[1] %)
 @define sizeof_K64Array %( &@cast(0, "K64Array", "$^libluajit_path")[1] %)
-@define sizeof_ptr %( &@cast(0, "global_State", "$^libluajit_path")->strmask %)
+@define sizeof_ptr %( &@cast(0, "global_State", "$^libluajit_path")->str->mask %)
 @define sizeof_GCcdataVar %( &@cast(0, "GCcdataVar", "$^libluajit_path")[1] %)
 @define sizeof_BCIns %( &@cast(0, "BCIns", "$^libluajit_path")[1] %)
 
@@ -771,9 +771,9 @@ function luajit_vm_state(g)
 function luajit_find_gcstr(g, str)
 {
     len = strlen(str)
-    strmask = $*g->strmask
-    strnum = $*g->strnum
-    strhash = $*g->strhash
+    strmask = $*g->str->mask
+    strnum = $*g->str->num
+    strhash = $*g->str->tab
     $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
     ret = 0
 

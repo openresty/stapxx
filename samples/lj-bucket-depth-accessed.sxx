@@ -5,7 +5,7 @@
 global stats
 
 probe process("$^libluajit_path").statement("*@lj_str.c:161") {
-    bucket = &$g->strhash[$h & $g->strmask]
+    bucket = &$g->str->tab[$h & $g->str->mask]
     stats <<< luajit_bucket_depth(bucket)
     //printf("depth = %d\n", depth)
     //exit()

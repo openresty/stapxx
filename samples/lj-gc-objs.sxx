@@ -93,9 +93,9 @@ function process(L)
         gcobjs[$*o->gch->gct] <<< size
     }
 
-    strmask = $*g->strmask
-    strnum = $*g->strnum
-    strhash = $*g->strhash
+    strmask = $*g->str->mask
+    strnum = $*g->str->num
+    strhash = $*g->str->tab
     $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
 
     n = 0

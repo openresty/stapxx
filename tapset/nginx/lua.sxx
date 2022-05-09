@@ -7,7 +7,7 @@
 function ngx_lua_cycle_get_main_conf()
 {
     return ngx_cycle_get_module_main_conf(@var("ngx_cycle", "$^exec_path"),
-                                       @var("ngx_http_lua_module", "$^exec_path")->ctx_index)
+                                          @var("ngx_http_lua_module", "$^exec_path")->ctx_index)
 }
 
 

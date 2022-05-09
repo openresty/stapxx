@@ -3,36 +3,40 @@
 @use nginx.lua
 @use luajit_gc64
 
-@define TSTR    %( 4 %)
-@define TUPVAL  %( 5 %)
-@define TTHREAD %( 6 %)
-@define TPROTO  %( 7 %)
-@define TFUNC   %( 8 %)
-@define TTRACE  %( 9 %)
-@define TCDATA  %( 10 %)
-@define TTAB    %( 11 %)
-@define TUDATA  %( 12 %)
+@define TNIL                    %( 0 %)
+@define TSTR                    %( 4 %)
+@define TUPVAL                  %( 5 %)
+@define TTHREAD                 %( 6 %)
+@define TPROTO                  %( 7 %)
+@define TFUNC                   %( 8 %)
+@define TTRACE                  %( 9 %)
+@define TCDATA                  %( 10 %)
+@define TTAB                    %( 11 %)
+@define TUDATA                  %( 12 %)
 
-@define GCSpause        %( 0 %)
-@define GCSpropagate    %( 1 %)
-@define GCSatomic       %( 2 %)
-@define GCSsweepstring  %( 3 %)
-@define GCSsweep        %( 4 %)
-@define GCSfinalize     %( 5 %)
+@define GCSpause                %( 0 %)
+@define GCSpropagate            %( 1 %)
+@define GCSatomic               %( 2 %)
+@define GCSsweepstring          %( 3 %)
+@define GCSsweep                %( 4 %)
+@define GCSfinalize             %( 5 %)
 
-@define LJ_PAGESIZE     %( 4096 %)
-@define LJ_NUM_CBPAGE   %( 1 %)
-@define CALLBACK_MCODE_SIZE    %( (@LJ_PAGESIZE * @LJ_NUM_CBPAGE) %)
+@define LJ_PAGESIZE             %( 4096 %)
+@define LJ_NUM_CBPAGE           %( 1 %)
+@define CALLBACK_MCODE_SIZE     %( (@LJ_PAGESIZE * @LJ_NUM_CBPAGE) %)
 
-@define sizeof_GG_State %( &@cast(0, "GG_State", "$^libluajit_path")[1] %)
-@define sizeof_lua_State %( &@cast(0, "struct lua_State", "$^libluajit_path")[1] %)
-@define sizeof_GCRef %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
-@define sizeof_CType %( &@cast(0, "CType", "$^libluajit_path")[1] %)
-@define sizeof_CTState %( &@cast(0, "CTState", "$^libluajit_path")[1] %)
+@define RETRIES_THRESHOLD       %( 10 %)
+
+@define sizeof_GG_State         %( &@cast(0, "GG_State", "$^libluajit_path")[1] %)
+@define sizeof_lua_State        %( &@cast(0, "struct lua_State", "$^libluajit_path")[1] %)
+@define sizeof_GCRef            %( &@cast(0, "GCRef", "$^libluajit_path")[1] %)
+@define sizeof_CType            %( &@cast(0, "CType", "$^libluajit_path")[1] %)
+@define sizeof_CTState          %( &@cast(0, "CTState", "$^libluajit_path")[1] %)
 
 global typenames
 global gcstates
 global gcobjs
+global retries = 0
 
 probe @pfunc(ngx_process_events_and_timers)?, timer.profile
 {
@@ -45,11 +49,16 @@ probe @pfunc(ngx_process_events_and_timers)?, timer.profile
         }
 
         if (L == 0) {
-            printf("Failed to get the main Lua VM\n")
-            exit()
-        }
+            if(retries > @RETRIES_THRESHOLD) {
+                printf("Failed to get the main Lua VM (retries %d)\n", retries)
+                exit()
+            }
 
-        process(L)
+            printf("Failed to get the main Lua VM (retries %d)\n", ++retries)
+
+        } else {
+            process(L)
+        }
     }
 }
 
@@ -93,9 +102,9 @@ function process(L)
         gcobjs[$*o->gch->gct] <<< size
     }
 
-    strmask = $*g->strmask
-    strnum = $*g->strnum
-    strhash = $*g->strhash
+    strmask = $*g->str->mask
+    strnum = $*g->str->num
+    strhash = $*g->str->tab
     $*strhash := @cast(strhash, "GCRef", "$^libluajit_path")
 
     n = 0
@@ -111,7 +120,7 @@ function process(L)
 
             $*o := @cast(o, "GCobj", "$^libluajit_path")
             gct = $*o->gch->gct
-            if (gct != @TSTR) {
+            if (gct != @TSTR && gct != @TNIL) {
                 error(sprintf("Bad string type: %d", gct))
             }
             size = luajit_objlen(o, @TSTR, g)

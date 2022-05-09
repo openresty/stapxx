@@ -3,6 +3,10 @@
 @use nginx.lua
 @use luajit_gc64
 
+@define RETRIES_THRESHOLD       %( 10 %)
+
+global retries = 0
+
 probe @pfunc(ngx_process_events_and_timers)?, timer.profile
 {
     if (pid() == target()) {
@@ -14,11 +18,16 @@ probe @pfunc(ngx_process_events_and_timers)?, timer.profile
         }
 
         if (L == 0) {
-            printf("Failed to get the main Lua VM\n")
-            exit()
-        }
+            if(retries > @RETRIES_THRESHOLD) {
+                printf("Failed to get the main Lua VM (retries %d)\n", retries)
+                exit()
+            }
 
-        process(L)
+            printf("Failed to get the main Lua VM (retries %d)\n", ++retries)
+
+        } else {
+            process(L)
+        }
     }
 }
 
